@@ -56,7 +56,7 @@ class Device:
         self.login_time = login_time
 
     def __repr__(self):
-        return '%s,%s(login_ip=%s, mac=%s, login_time=%d)' % (__name__, Device.__name__, repr(self.login_ip), repr(self.mac), self.login_time)
+        return '%s.%s(login_ip=%s, mac=%s, login_time=%d)' % (__name__, Device.__name__, repr(self.login_ip), repr(self.mac), self.login_time)
 
 
 def balance_cvt(balance: str) -> float:
