@@ -184,7 +184,6 @@ else:
 - 在非校园网中使用Web VPN获取用户信息
 
 ```python
-import time
 from gzhmu import *
 # 网上办公的账号密码
 account = 'xxxxxxxxxx'
