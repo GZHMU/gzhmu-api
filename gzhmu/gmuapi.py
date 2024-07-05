@@ -126,7 +126,7 @@ class Device:
         self.login_time = login_time
 
     def __repr__(self):
-        pattern = '%s,%s(login_ip=%s, mac=%s, login_time=%d)' 
+        pattern = '%s.%s(login_ip=%s, mac=%s, login_time=%d)' 
         return pattern % (__name__, Device.__name__, repr(self.login_ip), 
                           repr(self.mac), self.login_time)
 
