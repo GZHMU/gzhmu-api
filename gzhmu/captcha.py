@@ -4,7 +4,7 @@ import numpy as np
 pattern_data = os.path.join(os.path.split(__file__)[0], 'data.pk')
 
 
-def recognize(img):
+def recognize(img: np.ndarray) -> int:
     pattern = np.load(pattern_data, allow_pickle=True)
 
     left = 0

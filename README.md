@@ -12,7 +12,7 @@
 
 ## 2. 使用要求
 
-- Python3
+- Python3.5及以上
 
 - 联网
 
@@ -30,24 +30,81 @@ pip3 install -r requirements.txt
 
 ## 4. 示例
 
+以下是**gzhmu**模块的示例：
+
 - 获取指定账号的联系方式
 
 ```python
 from gzhmu import *
 account = 'xxxxxxxxxx'  # 将这里的xxxxxxxxxx替换为需要查询的账号
 try:
-    contact = Gzhmu.get_user_contact(account)
+    contact = Gzhmu.get_contact(account)
     print('phone:', contact.phone)
     print('email:', contact.email)
 except UsernameNotExistsException:
     print('账号不存在')
 ```
 
+- 在内网获取学籍卡片
+
+```python
+from gzhmu import *
+# 网上办公的账号密码
+account = 'xxxxxxxxxx'
+password = 'xxxxxxxxxx'
+gmu = Gzhmu(account, password)
+url = 'http://jwgl.gzhmu.edu.cn/jsxsd/'
+res = gmu.login(url)
+url = 'https://jwgl.gzhmu.edu.cn/jsxsd/grxx/xsxx_print.do'
+resp = gmu.post(url)
+with open('学籍卡片.xls', 'wb') as fp:
+    fp.write(resp.content)
+```
+
+- 使用Web VPN获取学籍卡片
+
+```python
+from gzhmu import *
+# 网上办公的账号密码
+account = 'xxxxxxxxxx'
+password = 'xxxxxxxxxx'
+vpn = WebVPN(account, password)
+# vpn = Gzhmu(account, password, webvpn=True)  # 另一种方式
+url = 'http://jwgl.gzhmu.edu.cn/jsxsd/'
+res = vpn.login(url)
+url = 'https://jwgl.gzhmu.edu.cn/jsxsd/grxx/xsxx_print.do'
+resp = vpn.post(url)
+with open('学籍卡片.xls', 'wb') as fp:
+    fp.write(resp.content)
+```
+
+- 使用Web VPN和网络代理获取学籍卡片
+
+```python
+from gzhmu import *
+# 网上办公的账号密码
+account = 'xxxxxxxxxx'
+password = 'xxxxxxxxxx'
+# 假设代理的地址是127.0.0.1:7890
+proxies = {
+    'http': 'http://127.0.0.1:7890',
+    'https': 'http://127.0.0.1:7890',
+}
+vpn = WebVPN(account, password, proxies=proxies)
+url = 'http://jwgl.gzhmu.edu.cn/jsxsd/'
+res = vpn.login(url)
+url = 'https://jwgl.gzhmu.edu.cn/jsxsd/grxx/xsxx_print.do'
+resp = vpn.post(url)
+with open('学籍卡片.xls', 'wb') as fp:
+    fp.write(resp.content)
+```
+
+以下是**gmuapi**模块的示例：
+
 - 在内网查询校园网认证账号信息
 
 ```python
 from gzhmu import *
-
 account = 'xxxxxxxxxx'  # 将这里的xxxxxxxxxx替换为需要查询的账号
 try:
     userInfo = loadUserInfo(account)
@@ -122,18 +179,17 @@ else:
     print('解绑失败')
 ```
 
-- 在外网使用VPN访问内网资源
+以上**gmuapi**模块的API，例如`loadUserInfo`、`loadOnlineDevices`和`unbind`都能使用Web VPN在外网进行访问，只需要传入一个`webvpn`参数即可，这个参数是一个`WebVPN`类的实例，例如：
+
+- 在非校园网中使用Web VPN获取用户信息
 
 ```python
 import time
 from gzhmu import *
-
 # 网上办公的账号密码
 account = 'xxxxxxxxxx'
 password = 'xxxxxxxxxx'
-
 vpn = WebVPN(account, password)
-
 # 登录Web VPN
 try:
     vpn.login()
@@ -141,24 +197,13 @@ try:
 except IncorrectCredentialException:
     print('账号密码错误')
     exit()
-
 # 使用VPN获取账号信息
 userInfo = loadUserInfo(account, webvpn=vpn)
 print('姓名：', userInfo.name)
 print('余额：', userInfo.balance, '元')
 print('已使用流量：', userInfo.use_flow, 'MB')
 print('剩余流量：', userInfo.available_flow, 'MB')
-
-# 使用VPN获取已登录设备信息
-devices = loadOnlineDevices(account, webvpn=vpn)
-
-print('IP\t\tMAC\t\tLogin Time')
-for device in devices:
-    print(device.login_ip, device.mac, time.ctime(device.login_time), sep='\t')
-
-# 使用VPN登出指定设备
-mac = 'xxxxxxxxxxxx'
-result = unbind(account, mac, webvpn=vpn)
+vpn.logou()
 ```
 
 ## 4. 免责声明
