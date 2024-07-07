@@ -512,56 +512,6 @@ class Gzhmu:
         captcha_result = recognize(captcha_array)
         return captcha_result
 
-    def get_access_token(self) -> Union[None, str]:
-        """Get the access token.
-
-        Get the access token which is necessary for Gzhmu.logout method.
-
-        :returns A access token when succeed or None when fail.
-        """
-        if self.__ticket is None:
-            return
-
-        if self.__access_token is not None:
-            return self.__access_token
-
-        url = 'https://portal.gzhmu.edu.cn/portal/login/config.js'
-        response = self.get(url)
-        text = response.content.decode('utf-8')
-        client_id = re.search(r'CLIENT_ID:\s*?\'(\w+)\'', text).group(1)
-        client_secret = re.search(r'CLIENT_SECRET:\s*?\'(\w+)\'', text).group(1)
-
-        data = {
-            "ticket": self.__ticket,
-            "casServerUrl": "https://sso.gzhmu.edu.cn/cas",
-            "pgtUrl": "",
-            "serviceUrl": "https://portal.gzhmu.edu.cn/portal/login/"
-        }
-        url = 'https://portal.gzhmu.edu.cn/qzbps/oauth2/v3/sso/login/cas10/apply'
-        response = self.post(url, json=data)
-        login_state = response.json()['data']
-
-        data = {
-            'client_id': client_id,
-            'login_state': login_state
-        }
-        url = 'https://portal.gzhmu.edu.cn/qzbps/oauth2/v3/authorize/apply'
-        response = self.post(url, json=data)
-        authorize_code = response.json()['data']
-
-        data = {
-            'client_id': client_id,
-            'authorize_code': authorize_code,
-            'client_secret': client_secret,
-            'grant_type': 'authorization_code'
-        }
-        url = 'https://portal.gzhmu.edu.cn/qzbps/oauth2/v3/authentication/apply'
-        response = self.post(url, json=data)
-        json_data = response.json()
-
-        self.__access_token = json_data['data']['access_token']
-        return self.__access_token
-
     def login(self, service: Optional[str] = 'https://portal.gzhmu.edu.cn/portal/login/') -> str:
         """Log in the portal and authorize the specific service.
 
@@ -665,10 +615,6 @@ class Gzhmu:
 
         if self.__ticket is None:
             return
-
-        access_token = self.get_access_token()
-        url = 'https://portal.gzhmu.edu.cn/qzbps/oauth2/v3/user/logout?access_token=%s' % access_token
-        self.post(url)
 
         url = 'https://sso.gzhmu.edu.cn/cas/logout?service=https://portal.gzhmu.edu.cn/portal/home/'
         self.get(url)
