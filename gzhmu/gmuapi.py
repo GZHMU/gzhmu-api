@@ -12,10 +12,15 @@ Examples:
         >>> account = 'xxxxxxxxxx'
         >>> userInfo = loadUserInfo(account)
         >>> print('account:', userInfo.account)
+        account: xxx
         >>> print('name:', userInfo.name)
-        >>> print('balance:', userInfo.balance)
-        >>> print('used flow:', userInfo.use_flow)
-        >>> print('available flow:', userInfo.available_flow)
+        name: xxx
+        >>> print('balance:', userInfo.balance, 'Yuan')
+        balance: xxx Yuan
+        >>> print('used flow:', userInfo.use_flow, 'MB')
+        used flow: xxx MB
+        >>> print('available flow:', userInfo.available_flow, 'MB')
+        available flow: xxx MB
 
     Log in campus network:
 
@@ -31,6 +36,7 @@ Examples:
         >>> devices = loadOnlineDevices(account)
         >>> for device in devices:
         ...     print(device.login_ip, device.mac, time.ctime(device.login_time), sep='\t')
+        ... 
         
     Unbind a specific device:
 
@@ -59,11 +65,15 @@ an object of WebVPN, for example:
         >>> res = vpn.login()
         >>> userInfo = loadUserInfo(username, webvpn=vpn)
         >>> print('account:', userInfo.account)
+        account: xxx
         >>> print('name:', userInfo.name)
-        >>> print('balance:', userInfo.balance)
-        >>> print('used flow:', userInfo.use_flow)
-        >>> print('available flow:', userInfo.available_flow)
-
+        name: xxx
+        >>> print('balance:', userInfo.balance, 'Yuan')
+        balance: xxx Yuan
+        >>> print('used flow:', userInfo.use_flow, 'MB')
+        used flow: xxx MB
+        >>> print('available flow:', userInfo.available_flow, 'MB')
+        available flow: xxx MB
 """
 
 import time
@@ -102,11 +112,12 @@ class RequestException(Exception):
 
 
 class UserInfo:
-    def __init__(self, account: Union[str, int], 
-                 name: str = '', 
-                 balance: Optional[float] = 0, 
-                 use_flow: Optional[float] = 0, 
-                 available_flow: Optional[float] = 0):
+    def __init__(self, 
+            account: Union[str, int], 
+            name: str = '', 
+            balance: Optional[float] = 0, 
+            use_flow: Optional[float] = 0, 
+            available_flow: Optional[float] = 0):
         self.account = str(account)
         self.name = str(name)
         self.balance = float(balance)
@@ -120,7 +131,8 @@ class UserInfo:
 
 
 class Device:
-    def __init__(self, login_ip: str, mac: str, login_time: Optional[int] = 0):
+    def __init__(self, 
+            login_ip: str, mac: str, login_time: Optional[int] = 0):
         self.login_ip = login_ip
         self.mac = mac.upper()
         self.login_time = login_time

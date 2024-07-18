@@ -111,7 +111,9 @@ class Gzhmu:
         >>> username = 'xxxxxxxxxx'
         >>> contact = Gzhmu.get_contact(username)
         >>> print('phone:', contact.phone)
+        phone: xxx
         >>> print('email:', contact.email)
+        email: xxx
 
     Log in the portal and get timetable without web VPN:
 
@@ -119,12 +121,12 @@ class Gzhmu:
         >>> username = 'xxxxxxxxxx'
         >>> password = 'xxxxxxxx'
         >>> gmu = Gzhmu(username, password)
-        >>> gmu.login()
-        True
+        >>> res = gmu.login()
         >>> url = 'http://jwgl.gzhmu.edu.cn/jsxsd/'
         >>> resp = gmu.get(url)
         >>> with open('timetable.html', 'wb') as fp:
         ...     fp.write(resp.content)
+        ... 
         22300
 
     Log in the protal and get timetable with web VPN:
@@ -134,12 +136,12 @@ class Gzhmu:
         >>> password = 'xxxxxxxx'
         >>> vpn = WebVPN(username, password)
         >>> # gmu = Gzhmu(username, password, webvpn=True)  # An alternative way.
-        >>> vpn.login()
-        True
+        >>> res = vpn.login()
         >>> url = 'http://jwgl.gzhmu.edu.cn/jsxsd/'
         >>> resp = vpn.get(url)
         >>> with open('timetable.html', 'wb') as fp:
         ...     fp.write(resp.content)
+        ... 
         22300
 
     Log in the protal and get timetable with web VPN and proxies:
@@ -150,12 +152,12 @@ class Gzhmu:
         >>> proxies = {'http': 'http://127.0.0.1:7890', 'https': 'http://127.0.0.1:7890'}
         >>> vpn = WebVPN(username, password, proxies=proxies)
         >>> # gmu = Gzhmu(username, password, webvpn=True, proxies=proxies)  # An alternative way.
-        >>> vpn.login()
-        True
+        >>> res = vpn.login()
         >>> url = 'http://jwgl.gzhmu.edu.cn/jsxsd/'
         >>> resp = vpn.get(url)
         >>> with open('timetable.html', 'wb') as fp:
         ...     fp.write(resp.content)
+        ... 
         22300
 
     :param username: The username to log in the portal.
@@ -482,6 +484,12 @@ class Gzhmu:
         """
         url = 'https://sso.gzhmu.edu.cn/cas/login?service=' + service
         response = self.get(url)
+        response_hostname = urlparse(response.url).hostname
+        is_on_campus_network_needed = response_hostname != urlparse(url).hostname and response_hostname == 'webvpn.gzhmu.edu.cn'
+        if is_on_campus_network_needed and not self.__webvpn:
+            raise NotOnCampusNetworkException()
+        elif not is_on_campus_network_needed and self.__webvpn:
+            raise OnCampusNetworkException()
         return response.text
 
     def get_captcha_img(self) -> bytes:
@@ -512,24 +520,24 @@ class Gzhmu:
         captcha_result = recognize(captcha_array)
         return captcha_result
 
-    def login(self, service: Optional[str] = 'https://portal.gzhmu.edu.cn/portal/login/') -> str:
+    def login(self, service: Optional[str] = 'https://portal.gzhmu.edu.cn/portal/login/') -> bool:
         """Log in the portal and authorize the specific service.
 
         :param service: Set the URL of the service to authorize, 
             so that you can access the resources of the service after login.
-        :returns A URL that you can use to visit the service on browser.
+        :returns Always True if log in successfully.
         """
         if self.__username is None:
             raise EmptyUsernameException()
         if self.__password is None:
             raise EmptyPasswordException()
-
+        '''
         is_on_campus_network = Gzhmu.is_on_campus_network()
         if is_on_campus_network and self.__webvpn:
             raise OnCampusNetworkException()
         if not is_on_campus_network and not self.__webvpn:
             raise NotOnCampusNetworkException()
-
+        '''
         query = {'service': service}
         login_url = 'https://sso.gzhmu.edu.cn/cas/login?' + urlencode(query)
 
@@ -539,8 +547,8 @@ class Gzhmu:
         # Logged in already.
         if execution is None:
             # Authorizate specific service.
-            response = self.get(login_url, allow_redirects=False)
-            return response.url
+            self.get(login_url, allow_redirects=False)
+            return True
 
         captcha_result = self.bypass_captcha()
         # Post login form data
@@ -577,7 +585,7 @@ class Gzhmu:
             response = self.get(login_url, allow_redirects=False)
  
         # Get login ticket
-        location = None
+        location_with_ticket = None
         is_first_ticket = True
         while response.status_code in [requests.codes.FOUND, 
                                        requests.codes.MOVED_PERMANENTLY]:
@@ -591,6 +599,7 @@ class Gzhmu:
             if ticket is not None and is_first_ticket:
                 self.__ticket = ticket[0]
                 is_first_ticket = False
+                location_with_ticket = location
             response = self.get(location, allow_redirects=False)
 
         if response.status_code not in [requests.codes.OK, 
@@ -598,10 +607,7 @@ class Gzhmu:
                                         requests.codes.MOVED_PERMANENTLY]:
             raise LoginFailedException('unknow failure, alert message not found')
 
-        if self.__webvpn:
-            return webvpn_login_url
-        else:
-            return location
+        return True
 
     def logout(self):
         """Log out the account."""

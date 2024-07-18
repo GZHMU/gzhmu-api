@@ -5,6 +5,11 @@ pattern_data = os.path.join(os.path.split(__file__)[0], 'data.pk')
 
 
 def recognize(img: np.ndarray) -> int:
+    """Resolve the CAPTCHA.
+
+    :param img: An image.
+    :return An verification code.
+    """
     pattern = np.load(pattern_data, allow_pickle=True)
 
     left = 0
