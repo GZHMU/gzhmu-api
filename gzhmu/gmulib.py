@@ -758,7 +758,6 @@ class GmuLib(Gzhmu):
             else:
                 is_open = seat_json['state'] == 'open'
             freetime = seat_json['freeTime']
-            print(freetime)
 
             records = []
             for record_json in seat_json['ts']:
@@ -972,7 +971,6 @@ class GmuLib(Gzhmu):
             if 'ERRMSG_RESV_CONFLICT' in msg:
                 raise ReserveConflictException()
         msg = resp_json['msg']
-        print(response.json())
 
         ret = response.json()['ret']
         return ret == 1
@@ -985,7 +983,6 @@ class GmuLib(Gzhmu):
         """
         check_in_url = GmuLib.get_check_in_url(reserve_record.seat)
         response = self.get(check_in_url)
-        print(response.text)
         if '操作成功' in response.text:
             return False
         if response.url == 'https://sso.gzhmu.edu.cn/cas/login?service=http://ggyy.gzhmu.edu.cn/pages/WxSeatSign.aspx':
@@ -993,7 +990,6 @@ class GmuLib(Gzhmu):
 
         url = 'https://ggyy.gzhmu.edu.cn/Pages/WxSeatSign.aspx?Userin=true'
         response = self.get(url)
-        print(response.text)
         return '签到成功' in response.text
 
     def cancel(self, reserve_record: UserRecord) -> bool:
@@ -1019,7 +1015,6 @@ class GmuLib(Gzhmu):
         """
         url = f'https://ggyy.gzhmu.edu.cn/ClientWeb/pro/ajax/reserve.aspx?act=resv_leave&type=2&resv_id={reserve_record.reserve_id}'
         response = self.get(url)
-        print(response.text)
         now = datetime.datetime().now()
         if reserve_record.start > now or reserve_record.end < now:
             return False
@@ -1038,7 +1033,6 @@ class GmuLib(Gzhmu):
             resp_json = response.json()
             ret = resp_json['ret']
             msg = resp_json['msg']
-            print(response.text)
             if ret == 1:
                 return True
 
