@@ -141,6 +141,7 @@ except FailedToLoadOnlineDevicesException:
 ```python
 from gzhmu import *
 
+#登录校园网的账号密码
 account = 'xxxxxxxxxx'
 password = 'xxxxxxxx'
 
@@ -332,7 +333,7 @@ if res:
     print('预约成功')
 ```
 
-- 取消预约
+- 取消一个尚未生效的预约
 
 ```python
 from datetime import datetime, time
@@ -353,7 +354,9 @@ if res:
     print('成功取消预约')
 ```
 
-- 签到
+注意：一个预约会在预约开始时间的前15分钟开始生效，直到预约结束，在预约生效前可以随时取消，而预约生效后无法正常取消，此时只能通过签到再结束使用来避免违约，详见以下2个示例：
+
+- 对一个已生效预约进行签到
 
 ```python
 from datetime import datetime, time
@@ -365,7 +368,7 @@ res = lib.login()
 # 获取预约记录
 user_records = lib.get_reserve_history()
 for record in user_records:
-    # 选取第一条生效的预约记录进行签到
+    # 选取第一条已生效的预约记录进行签到
     if record.state == 'doing':
         print('座位：', record.seat.seat_name)
         print('开始时间：', record.start.ctime())
@@ -375,7 +378,7 @@ for record in user_records:
             print('成功签到')
 ```
 
-- 结束使用
+- 结束一个已生效预约座位的使用
 
 ```python
 from datetime import datetime, time
@@ -387,7 +390,7 @@ res = lib.login()
 # 获取预约记录
 user_records = lib.get_reserve_history()
 for record in user_records:
-    # 选取第一条生效的预约记录进行签到
+    # 选取第一条已生效的预约记录进行签到
     if record.state == 'doing':
         print('座位：', record.seat.seat_name)
         print('开始时间：', record.start.ctime())
@@ -396,6 +399,9 @@ for record in user_records:
         if res:
             print('成功签退，结束使用')
 ```
+
+GmuLib的finish方法能够结束一个已生效的预约，如果此时未签到，则该方法能够自动进行签到后结束使用，若此时已签到则直接结束使用。
+
 ## 4. 免责声明
 
 本项目仅用于学习交流目的，请勿用于非法用途，因使用本项目造成的可能的损失由使用者承担，与本项目无关，您使用此项目代表您同意此声明。
