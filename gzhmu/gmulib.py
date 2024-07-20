@@ -834,10 +834,10 @@ class GmuLib(Gzhmu):
             List[Union[PrivateNewUserRecord, PrivateFinishedRecord]]:
         """Get reservation history of current user.
 
-        :param is_new_record: Specify whether to query the latest reservation 
-            history or the last 3 months history. Default to True.
+        :param is_new_record: Set True to query the latest reservation history.
+            Or False to query the last 3 months history. Default to True.
         :return A list of PrivateNewUserRecord objects if is_new_record is True.
-                Or a list of PrivateFinishedRecord objects if is_new_record is False.
+            Or a list of PrivateFinishedRecord objects if is_new_record is False.
         """
         stat_flag = 'NEW' if is_new_record else 'OVER'
         url = 'https://ggyy.gzhmu.edu.cn/ClientWeb/pro/ajax/center.aspx?act=get_History_resv&StatFlag='
