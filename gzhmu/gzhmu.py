@@ -165,6 +165,7 @@ class Gzhmu:
     :param webvpn: Whether to use web VPN.
     :param proxies: Use a proxy for every individual requests.
         See `https://docs.python-requests.org/en/latest/user/advanced/#proxies` in detail.
+    :param verify: Whether to verify server's TLS certificate.
     :param timeout: Timeout for every individual requests.
     """
 
@@ -179,6 +180,7 @@ class Gzhmu:
                  password: Optional[Union[None, str]] = None, 
                  webvpn: Optional[bool] = False, 
                  proxies: Optional[Union[None, dict]] = None, 
+                 verify: Optional[Union[None, bool]] = True, 
                  timeout: Optional[Union[int ,float]] = 10):
         if username is not None:
             self.set_username(username)
@@ -195,6 +197,7 @@ class Gzhmu:
             self.__proxies = proxies
         else:
             self.__proxies = None
+        self.__verify = bool(verify)
         self.__timeout = float(timeout)
 
         self.__session = requests.session()
@@ -348,7 +351,7 @@ class Gzhmu:
 
     @staticmethod
     def get_contact(username: Union[str, int], 
-                    webvpn: Optional[bool] = False, 
+                    webvpn: Optional[bool] = True, 
                     **kwargs) -> Contact:
         """Get the contact of a specific user.
 
@@ -363,7 +366,7 @@ class Gzhmu:
         url = 'https://sso.gzhmu.edu.cn/cas/login'
         if webvpn:
             url = Gzhmu.encrypt_url(url)
-        gmu = Gzhmu(username, webvpn=webvpn)
+        gmu = Gzhmu(username, webvpn=webvpn, proxies=kwargs.get('proxies'), verify=kwargs.get('verify'))
         response = gmu.get(url, **kwargs)
 
         data = {
@@ -465,6 +468,14 @@ class Gzhmu:
         :returns The proxies.
         """
         return self.__proxies
+
+    def is_verify(self) -> bool:
+        """Check whether to verify server's TLS certificate."""
+        return self.__verify
+
+    def set_verify(self, flag: bool):
+        """Set whether to verify server's TLS certificate."""
+        self.__verify = bool(flag)
 
     def set_proxies(self, proxies: dict):
         """Set the proxies for each individual requests.
@@ -693,8 +704,10 @@ class WebVPN(Gzhmu):
     :param password: The passwrod to log in the portal.
     :param proxies: Use a proxy for every individual requests.
         See `https://docs.python-requests.org/en/latest/user/advanced/#proxies` in detail.
+    :param verify: Whether to verify server's TLS certificate.
     """
     def __init__(self, username: Optional[Union[None, str, int]] = None, 
                  password: Optional[Union[None, str]] = None, 
-                 proxies: Optional[Union[None, dict]] = None):
-        super().__init__(username, password, webvpn=True, proxies=proxies)
+                 proxies: Optional[Union[None, dict]] = None,
+                 verify: Optional[Union[None, bool]] = True):
+        super().__init__(username, password, webvpn=True, proxies=proxies, verify=verify)
