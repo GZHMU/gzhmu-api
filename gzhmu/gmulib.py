@@ -503,7 +503,7 @@ class GmuLib(Gzhmu):
 
         :return Always True if log in successfully.
         """
-        url = 'http://ggyy.gzhmu.edu.cn'
+        url = 'http://ggyy.gzhmu.edu.cn/loginall.aspx'
         res = super().login(service=url)
         return res
 
@@ -818,7 +818,9 @@ class GmuLib(Gzhmu):
             end = re.search(r' - ([\d\- :]+?)</div></li>', record_raw_text).group(1)
             end = str(start.year) + '-' + end
             end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M')
-            seat_info = seat_info_dict[room_name]
+            seat_info = seat_info_dict.get(room_name)
+            if seat_info is None:
+                continue
             for record in seat_info.records:
                 if start == record.start and end == record.end:
                     user_record = UserRecord(reserve_id, seat_info.seat, 

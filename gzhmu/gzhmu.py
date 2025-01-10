@@ -6,7 +6,8 @@ from urllib.parse import urlparse, urlunparse, urlencode, parse_qs
 
 import requests
 import numpy as np
-from Crypto.Cipher import AES
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import AES, PKCS1_v1_5
 from PIL import Image
 
 from .captcha import recognize
@@ -405,7 +406,9 @@ class Gzhmu:
             email = None
         else:
             end = response.text.find('"', start)
-            email = response.text[start:end]
+            email = response.text[start:end].strip()
+            if email == '':
+                email = None
 
         return Contact(phone, email)
 
@@ -562,10 +565,20 @@ class Gzhmu:
             return True
 
         captcha_result = self.bypass_captcha()
+
+        # RSA encryption
+        rsa_key_url = 'https://sso.gzhmu.edu.cn/cas/encrypt/getRasKey'
+        response = self.get(rsa_key_url)
+        public_key_str = '-----BEGIN RSA PUBLIC KEY-----\n' + response.json()['data'] + '\n-----END RSA PUBLIC KEY-----'
+        public_key = RSA.importKey(public_key_str)
+        cipher = PKCS1_v1_5.new(public_key)
+        encrypted_username = base64.b64encode(cipher.encrypt(self.__username.encode('utf-8')))
+        encrypted_password = base64.b64encode(cipher.encrypt(self.__password.encode('utf-8')))
+
         # Post login form data
         formdata = {
-            'username': self.__username,
-            'password': self.__password,
+            'username': encrypted_username,
+            'password': encrypted_password,
             'captcha': captcha_result,
             '_eventId': 'submit',
             'geolocation': '',
