@@ -131,7 +131,7 @@ try:
 
     print('IP\t\tMAC\t\tLogin Time')
     for device in devices:
-        print(device.login_ip, device.mac, time.ctime(device.login_time), sep='\t')
+        print(device.login_ip, device.mac, time.strftime('%Y-%m-%d_%H:%M:%S'), sep='\t')
 except FailedToLoadOnlineDevicesException:
     print('无法获取在线设备信息，查询的账号不存在')
 ```
@@ -208,6 +208,8 @@ print('剩余流量：', userInfo.available_flow, 'MB')
 vpn.logou()
 ```
 
+注意：当在使用**非校园网**访问校园网内网资源或调用gmuapi模块中的接口时**必须**使用Web VPN访问，相反，若连接**校园网内网**则**不能**使用Web VPN访问。而在非校园网使用gmulib模块访问图书馆接口，直链或使用Web VPN皆可。
+
 ### 4.3. **gmulib**模块示例
 
 - 列出各图书馆的各个研修室名称
@@ -233,13 +235,26 @@ username = 'xxxxxxxxxx'
 password = 'xxxxxxxxxx'
 lib = GmuLib(username, password)
 res = lib.login()
-room_name = '1楼自修区Ⅰ（越秀）'
+room_name = '1楼自修区Ⅰ(越秀）'
 room_list = lib.get_room_with_name(room_name)
 room = room_list[0]
 seat_number = 20
 seat = room.get_seat_with_number(seat_number)
 url = GmuLib.get_check_in_url(seat)  # 越秀图书馆1楼自修区Ⅰ 20号座位
 print(url)
+```
+
+- 从签到链接中获取座位信息
+
+```python
+from gzhmu import GmuLib
+username = 'xxxxxxxxxx'
+password = 'xxxxxxxxxx'
+lib = GmuLib(username, password)
+res = lib.login()
+check_in_url = 'http://update.unifound.net/wxnotice/s.aspx?c=100492751_Seat_100495246_1EQ'
+seat = lib.get_seat_with_check_in_url(check_in_url)
+print('{} {} {}号座'.format(seat.lib_name, seat.room_name, seat.seat_number))
 ```
 
 - 查询用户最新的预约记录
@@ -251,9 +266,38 @@ password = 'xxxxxxxxxx'
 lib = GmuLib(username, password)
 res = lib.login()
 user_records = lib.get_reserve_history()
-print('执行预约操作的时间', '座位名称', '姓名', '状态', '开始时间', '\t结束时间', sep='\t')
+print('执行预约操作的时间', '座位名称', '姓名', '是否生效', '是否签到', '开始时间', '\t结束时间', sep='\t')
 for record in user_records:
-    print(record.reserve_at.ctime(), record.seat.seat_name, record.owner, record.state, record.start.ctime(), record.end.ctime(), sep='\t')
+    reserve_at = record.reserve_at.strftime('%Y-%m-%d_%H:%M:%S')
+    seat_name = record.seat.seat_name
+    owner = record.owner
+    state = '已生效' if record.is_validated else '未生效'
+    is_checked_in = '已签到' if record.is_checked_in else '未签到'
+    start = record.start.strftime('%Y-%m-%d_%H:%M:%S')
+    end = record.end.strftime('%Y-%m-%d_%H:%M:%S')
+    print(reserve_at, seat_name, owner, state, is_checked_in, start, end, sep='\t')
+```
+
+- 查询用户最新的三个月已完成的预约记录
+
+```python
+from gzhmu import GmuLib
+username = 'xxxxxxxxxx'
+password = 'xxxxxxxxxx'
+lib = GmuLib(username, password)
+res = lib.login()
+user_records = lib.get_reserve_history(is_new_record=False)
+print('执行预约操作的时间', '座位名称', '姓名', '是否生效', '是否签到', '是否违约', '开始时间', '\t结束时间', sep='\t')
+for user_record in user_records:
+    reserve_at = user_record.reserve_at.strftime('%Y-%m-%d_%H:%M:%S')
+    seat_name = user_record.seat.seat_name
+    owner = user_record.owner
+    state = '已生效' if user_record.is_validated else '未生效'
+    is_checked_in = '已签到' if user_record.is_checked_in else '未签到'
+    is_default = '违约' if user_record.is_default else '未违约'
+    start = record.start.strftime('%Y-%m-%d_%H:%M:%S')
+    end = record.end.strftime('%Y-%m-%d_%H:%M:%S')
+    print(reserve_at, seat_name, owner, state, is_checked_in, is_default, start, end, sep='\t')
 ```
 
 - 查询用户信息
@@ -278,26 +322,32 @@ username = 'xxxxxxxxxx'
 password = 'xxxxxxxxxx'
 lib = GmuLib(username, password)
 res = lib.login()
-library_list = lib.get_library_with_name('越秀')
+library_list = lib.get_library_with_name('越秀校区图书馆')
 library = library_list[0]
 seat_info_list = lib.get_seat_info(library)  # 获取越秀图书馆所有座位的实时信息
 
-room_list = lib.get_room_with_name('1楼自修区Ⅰ（越秀）')
+room_list = lib.get_room_with_name('1楼自修区Ⅰ(越秀）')
 room = room_list[0]
 seat_info_list = lib.get_seat_info(room)  # 获取指定研修室的所有座位的实时信息
 
-seat_number = 20
-seat = room.get_seat_with_number(seat_number)
-seat_info_list = lib.get_seat_info(seat)  # 获取指定座位的实时信息
+# seat_number = 20
+# seat = room.get_seat_with_number(seat_number)
+# seat_info_list = lib.get_seat_info(seat)  # 获取指定座位的实时信息
 
-seat_info = seat_list[0]
-print('座位名称：', seat_info.seat.seat_name)
-print('座位状态：', seat_info.state)
-print('剩余空闲时间：', seat_info.freetime, '分钟')
-print('已预约记录：')
-print('姓名', '状态', '开始时间', '\t结束时间', sep='\t')
-for record in seat_info.records:
-    print(record.owner, record.state, record.start.ctime(), record.end.ctime(), sep='\t')
+for seat_info in seat_info_list:
+    print('座位名称：', seat_info.seat.seat_name)
+    print('座位状态：', '开放使用' if seat_info.is_open else '未开放使用')
+    print('剩余空闲时间：', seat_info.freetime, '分钟')
+    print('已预约记录：')
+    if len(seat_info.records) > 0:
+        print('\t', '姓名', '是否生效', '开始时间', '\t结束时间', sep='\t')
+        for record in seat_info.records:
+            owner = record.owner
+            state = '已生效' if record.is_validated else '未生效'
+            start = record.start.strftime('%Y-%m-%d_%H:%M:%S')
+            end = record.end.strftime('%Y-%m-%d_%H:%M:%S')
+            print('\t', owner, state, start, end, sep='\t')
+    print()
 ```
 
 - 获取今天的所有预约信息
@@ -308,17 +358,22 @@ username = 'xxxxxxxxxx'
 password = 'xxxxxxxxxx'
 lib = GmuLib(username, password)
 res = lib.login()
-records = lib.get_today_reserve_records()
-print('座位', '姓名', '状态', '开始时间', '结束时间', sep='\t')
-for record in user_records:
-    print(record.seat.seat_name, record.owner, record.state, record.start.ctime(), record.end.ctime())
+user_records = lib.get_today_reserve_records()
+print('座位', '姓名', '是否生效', '开始时间', '结束时间', sep='\t')
+for user_record in user_records:
+    seat_name = user_record.seat.seat_name
+    owner = user_record.owner
+    state = '已生效' if user_record.is_validated else '未生效'
+    start = user_record.start.strftime('%Y-%m-%d_%H:%M:%S')
+    end = user_record.end.strftime('%Y-%m-%d_%H:%M:%S')
+    print(seat_name, owner, state, start, end, sep='\t')
 ```
 
 - 预约一个座位
 
 ```python
 from datetime import datetime, time
-from gzhmu import GmuLib
+from gzhmu import GmuLib, ReserveConflictException
 username = 'xxxxxxxxxx'
 password = 'xxxxxxxxxx'
 lib = GmuLib(username, password)
@@ -328,30 +383,40 @@ seat = seat_list[0]
 date = datetime.today().date()  # 日期为今天
 start = time(17, 0)  # 开始时间为17:00
 end = time(17, 30)  # 结束时间为17:30
-res = lib.reserve(seat, date, start, end)
-if res:
-    print('预约成功')
+try:
+    res = lib.reserve(seat, date, start, end)
+    if res:
+        print('预约成功')
+except ReserveConflictException as e:
+    print('座位冲突，当前作为已被预约或正在使用中')
 ```
 
 - 取消一个尚未生效的预约
 
 ```python
 from datetime import datetime, time
-from gzhmu import GmuLib
+from gzhmu import GmuLib, CanNotCancelValidatedReservationException
 username = 'xxxxxxxxxx'
 password = 'xxxxxxxxxx'
 lib = GmuLib(username, password)
 res = lib.login()
 # 获取预约记录
 user_records = lib.get_reserve_history()
+if len(user_records) == 0:
+    print('未找到预约记录')
+    exit()
+
 # 选取第一条记录
 record = user_records[0]
 print('座位：', record.seat.seat_name)
-print('开始时间：', record.start.ctime())
-print('结束时间：', record.end.ctime())
-res = lib.cancel(record)
-if res:
-    print('成功取消预约')
+print('开始时间：', record.start.strftime('%Y-%m-%d_%H:%M:%S'))
+print('结束时间：', record.end.strftime('%Y-%m-%d_%H:%M:%S'))
+try:
+    res = lib.cancel(record)
+    if res:
+        print('成功取消预约')
+except CanNotCancelValidatedReservationException as e:
+    print('无法取消一个已生效的预约，请先进行签到，或直接使用finish方法取消预约')
 ```
 
 注意：一个预约会在预约开始时间的前15分钟开始生效，直到预约结束，在预约生效前可以随时取消，而预约生效后无法正常取消，此时只能通过签到再结束使用来避免违约，详见以下2个示例：
@@ -369,10 +434,10 @@ res = lib.login()
 user_records = lib.get_reserve_history()
 for record in user_records:
     # 选取第一条已生效的预约记录进行签到
-    if record.state == 'doing':
+    if record.is_validated:
         print('座位：', record.seat.seat_name)
-        print('开始时间：', record.start.ctime())
-        print('结束时间：', record.end.ctime())
+        print('开始时间：', record.start.strftime('%Y-%m-%d_%H:%M:%S'))
+        print('结束时间：', record.end.strftime('%Y-%m-%d_%H:%M:%S'))
         res = lib.check_in(record)
         if res:
             print('成功签到')
@@ -390,11 +455,11 @@ res = lib.login()
 # 获取预约记录
 user_records = lib.get_reserve_history()
 for record in user_records:
-    # 选取第一条已生效的预约记录进行签到
-    if record.state == 'doing':
+    # 结束第一条已生效的预约记录
+    if record.is_validated:
         print('座位：', record.seat.seat_name)
-        print('开始时间：', record.start.ctime())
-        print('结束时间：', record.end.ctime())
+        print('开始时间：', record.start.strftime('%Y-%m-%d_%H:%M:%S'))
+        print('结束时间：', record.end.strftime('%Y-%m-%d_%H:%M:%S'))
         res = lib.finish(record)
         if res:
             print('成功签退，结束使用')

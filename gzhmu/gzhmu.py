@@ -604,7 +604,7 @@ class Gzhmu:
         # Authorize Web VPN
         if self.__webvpn:
             response = self.get(response.url, allow_redirects=False)
-            webvpn_login_url = response.headers['Location']
+            webvpn_login_url = response.headers.get('Location')
             self.get(response.url)
             response = self.get(login_url, allow_redirects=False)
  

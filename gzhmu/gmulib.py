@@ -41,6 +41,11 @@ class ReserveLessThan30MinutesException(ReserveException):
         super().__init__(*args)
 
 
+class CanNotCancelValidatedReservationException(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
 class Seat:
     """A seat.
 
@@ -288,7 +293,7 @@ class GmuLib(Gzhmu):
         ...         print('\t', room.room_name)
         ... 
 
-    Get a check in URL of the specific seat:
+    Get a check-in URL of the specific seat:
 
         >>> from gzhmu import GmuLib
         >>> username = 'xxxxxxxxxx'
@@ -305,6 +310,17 @@ class GmuLib(Gzhmu):
         >>> print(url)
         http://update.unifound.net/wxnotice/s.aspx?c=100492751_Seat_100495246_1EQ
 
+    Get seat information from a check-in URL:
+
+        >>> from gzhmu import GmuLib
+        >>> username = 'xxxxxxxxxx'
+        >>> password = 'xxxxxxxxxx'
+        >>> lib = GmuLib(username, password)
+        >>> res = lib.login()
+        >>> check_in_url = 'http://update.unifound.net/wxnotice/s.aspx?c=100492751_Seat_100495246_1EQ'
+        >>> seat = lib.get_seat_with_check_in_url(check_in_url)
+        >>> print('{} {} {}号座'.format(seat.lib_name, seat.room_name, seat.seat_number))
+
     Get the latest reservation records of the current user:
 
         >>> from gzhmu import GmuLib
@@ -313,9 +329,39 @@ class GmuLib(Gzhmu):
         >>> lib = GmuLib(username, password)
         >>> res = lib.login()
         >>> user_records = lib.get_reserve_history()
-        >>> for record in user_records:
-        ...     print(record.reserve_at.ctime(), record.seat.seat_name, record.owner, record.is_open, record.is_checked_in, record.start.ctime(), record.end.ctime(), sep='\t')
+        >>> print('reserve at', 'seat name', 'owner', 'is validated', 'is checked in', 'start', 'end', sep='\t')
+        >>> for user_record in user_records:
+        ...     reserve_at = user_record.reserve_at.strftime('%Y-%m-%d_%H:%M:%S')
+        ...     seat_name = user_record.seat.seat_name
+        ...     owner = user_record.owner
+        ...     is_validated = user_record.is_validated
+        ...     is_checked_in = user_record.is_checked_in
+        ...     start = user_record.start.strftime('%Y-%m-%d_%H:%M:%S')
+        ...     end = user_record.end.strftime('%Y-%m-%d_%H:%M:%S')
+        ...     print(reserve_at, seat_name, owner, is_validated, is_checked_in, start, end, sep='\t')
         ... 
+
+    Get the finished reservation records of the current user in the past three months:
+
+        >>> from gzhmu import GmuLib
+        >>> username = 'xxxxxxxxxx'
+        >>> password = 'xxxxxxxxxx'
+        >>> lib = GmuLib(username, password)
+        >>> res = lib.login()
+        >>> user_records = lib.get_reserve_history(is_new_record=False)
+        >>> print('reserve at', 'seat name', 'owner', 'is validated', 'is checked in', 'is default', 'start', 'end', sep='\t')
+        >>> for user_record in user_records:
+        ...     reserve_at = user_record.reserve_at.strftime('%Y-%m-%d_%H:%M:%S')
+        ...     seat_name = user_record.seat.seat_name
+        ...     owner = user_record.owner
+        ...     is_validated = user_record.is_validated
+        ...     is_checked_in = user_record.is_checked_in
+        ...     is_default = user_record.is_default
+        ...     start = user_record.start.strftime('%Y-%m-%d_%H:%M:%S')
+        ...     end = user_record.end.strftime('%Y-%m-%d_%H:%M:%S')
+        ...     print(reserve_at, seat_name, owner, is_validated, is_checked_in, is_default, start, end, sep='\t')
+        ... 
+
 
     Get the current user information:
 
@@ -356,15 +402,19 @@ class GmuLib(Gzhmu):
         >>> # Get the realtime information of the specified seat.
         >>> seat_info_list = lib.get_seat_info(seat)
         >>> 
-        >>> seat_info = seat_list[0]
-        >>> print('seat name:', seat_info.seat.seat_name)
-        seat name: xxx
-        >>> print('is open:', seat_info.is_open)
-        is open: True
-        >>> print('free time:', seat_info.freetime, 'minutes')
-        free time: 840 minutes
-        >>> for record in seat_info.records:
-        ...     print(record.owner, record.is_validated, record.start.ctime(), record.end.ctime(), sep='\t')
+        >>> for seat_info in seat_info_list:
+        ...     print('seat name:', seat_info.seat.seat_name)
+        ...     print('is open:', seat_info.is_open)
+        ...     print('free time:', seat_info.freetime, 'minutes')
+        ...     print('reservation records:')
+        ...     if len(seat_info.records) > 0:
+        ...         print('\t', 'owner', 'is validated', 'start', 'end', sep='\t')
+        ...         for record in seat_info.records:
+        ...             owner = record.owner
+        ...             is_validated = record.is_validated
+        ...             start = record.start.strftime('%Y-%m-%d_%H:%M:%S')
+        ...             end = record.end.strftime('%Y-%m-%d_%H:%M:%S')
+        ...             print('\t', owner, is_validated, start, end, sep='\t')
         ... 
 
     Get all the reservation records today in all the libraries:
@@ -374,15 +424,20 @@ class GmuLib(Gzhmu):
         >>> password = 'xxxxxxxxxx'
         >>> lib = GmuLib(username, password)
         >>> res = lib.login()
-        >>> records = lib.get_today_reserve_records()
-        >>> for record in user_records:
-        ...     print(record.seat.seat_name, record.owner, record.is_validated, record.start.ctime(), record.end.ctime())
+        >>> user_records = lib.get_today_reserve_records()
+        >>> for user_record in user_records:
+        ...     seat_name = user_record.seat.seat_name
+        ...     owner = user_record.owner
+        ...     is_validated = user_record.is_validated
+        ...     start = user_record.start.strftime('%Y-%m-%d_%H:%M:%S')
+        ...     end = user_record.end.strftime('%Y-%m-%d_%H:%M:%S')
+        ...     print(seat_name, owner, is_validated, start, end)
         ... 
 
     Reserve a seat:
 
         >>> from datetime import datetime, time
-        >>> from gzhmu import GmuLib
+        >>> from gzhmu import GmuLib, ReserveConflictException
         >>> username = 'xxxxxxxxxx'
         >>> password = 'xxxxxxxxxx'
         >>> lib = GmuLib(username, password)
@@ -393,13 +448,19 @@ class GmuLib(Gzhmu):
         >>> date = datetime.today().date()  # Set date to today
         >>> start = time(17, 0)  # Set start time to 17:00
         >>> end = time(17, 30)  # Set end time to 17:30
-        >>> lib.reserve(seat, date, start, end)
-        True
+        >>> try:
+        ...     res = lib.reserve(seat, date, start, end)
+        ...     if res:
+        ...         print('success')
+        ... except ReserveConflictException as e:
+        ...     print('failed to reserve due conflict')
+        ...
+        success
 
     Cancel the reservation record:
 
         >>> from datetime import datetime, time
-        >>> from gzhmu import GmuLib
+        >>> from gzhmu import GmuLib, CanNotCancelValidatedReservationException
         >>> username = 'xxxxxxxxxx'
         >>> password = 'xxxxxxxxxx'
         >>> lib = GmuLib(username, password)
@@ -414,8 +475,13 @@ class GmuLib(Gzhmu):
         start time: xxx
         >>> print('end time:', record.end.ctime())
         end time: xxx
-        >>> lib.cancel(record)
-        True
+        >>> try:
+        ...     res = lib.cancel(record)
+        ...     if res:
+        ...         print('success')
+        ... except CanNotCancelValidatedReservationException as e:
+        ...     print('cannot cancel a validated reservation, please check in first or try to finish it')
+        success
 
     Check in:
 
@@ -435,11 +501,12 @@ class GmuLib(Gzhmu):
         ...         print('end time:', record.end.ctime())
         ...         res = lib.check_in(record)
         ...         if res:
-        ...             print('succeeded')
+        ...             print('success')
         ...         else:
         ...             print('failed')
         ...         break
         ... 
+        success
 
     Finish reservation:
 
@@ -459,10 +526,11 @@ class GmuLib(Gzhmu):
         ...         print('end time:', record.end.ctime())
         ...         res = lib.finish(record)
         ...         if res:
-        ...             print('succeeded')
+        ...             print('success')
         ...         else:
         ...             print('failed')
         ... 
+        success
 
     See gzhmu.Gzhmu for more details.
 
@@ -727,7 +795,7 @@ class GmuLib(Gzhmu):
         elif isinstance(target, Room):
             query_params['room_id'] = target.room_id
         elif isinstance(target, Library):
-            query_params['lab_id'] = target.lab_id
+            query_params['lab_id'] = target.lib_id
         else:
             raise TypeError(f'should be of type None, Library, Room or Seat, but {type(target)} found.')
 
@@ -746,13 +814,13 @@ class GmuLib(Gzhmu):
 
         seat_info_list = []
         for seat_json in resp_json['data']:
-            lab_id = int(seat_json['labId'])
+            lib_id = int(seat_json['labId'])
             lab_name = seat_json['labName']
             room_id = int(seat_json['roomId'])
             room_name = seat_json['roomName']
             seat_id = int(seat_json['devId'])
             seat_name = seat_json['devName']
-            seat = Seat(lab_id, lab_name, room_id, room_name, seat_id, seat_name)
+            seat = Seat(lib_id, lab_name, room_id, room_name, seat_id, seat_name)
             if seat_json['state'] is None:
                 is_open = seat_json['ops'][0]['state'] == 'open'
             else:
@@ -967,12 +1035,12 @@ class GmuLib(Gzhmu):
         response = self.get(url)
         resp_json = response.json()
         ret = resp_json['ret']
+        msg = resp_json['msg']
         if ret == 1:
             return True
         elif ret == 0:
             if 'ERRMSG_RESV_CONFLICT' in msg:
                 raise ReserveConflictException()
-        msg = resp_json['msg']
 
         ret = response.json()['ret']
         return ret == 1
@@ -1006,6 +1074,8 @@ class GmuLib(Gzhmu):
             return True
         elif ret == -1:
             raise NotLoggedInOrLoginExpiredException()
+        elif ret == 0:
+            raise CanNotCancelValidatedReservationException('can not cancel a validated reservation, please check in first or try to finish the reservation')
         else:
             raise Exception(resp_json['ret'])
 
@@ -1017,7 +1087,7 @@ class GmuLib(Gzhmu):
         """
         url = f'https://ggyy.gzhmu.edu.cn/ClientWeb/pro/ajax/reserve.aspx?act=resv_leave&type=2&resv_id={reserve_record.reserve_id}'
         response = self.get(url)
-        now = datetime.datetime().now()
+        now = datetime.datetime.now()
         if reserve_record.start > now or reserve_record.end < now:
             return False
         if '获取预约的设备失败' in response.text:
