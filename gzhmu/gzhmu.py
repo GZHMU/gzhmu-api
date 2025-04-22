@@ -356,6 +356,17 @@ class Gzhmu:
                     **kwargs) -> Contact:
         """Get the contact of a specific user.
 
+        Note: Since April 2025, the official website of GMU has been
+        updated and the bug that you can get the complete phone number
+        and email address from frontend has been fixed. Therefore,
+        there is no way to get complete contact information from
+        frontend HTML. So the 4 digits from the 4th to the 7th of the
+        phone number and the 3 characters from the 3rd to the 5th of
+        the email address obtained from this function is invisible
+        and replaced by asterisk "*". As a result, a phone number will
+        look like "123****4567" and an email address will look like
+        "ab***cde@example.com".
+
         :param username: Specify a username.
         :param webvpn: Whether to use web VPN, True to use web VPN.
         :param kwargs: Arguments for requests.request method.
@@ -386,13 +397,16 @@ class Gzhmu:
         response = gmu.post(url, data=data, **kwargs)
         text = response.content.decode('utf-8')
 
+        if '验证码不正确' in text:
+            raise IncorrectVerificationCodeException()
+
         if '账号不存在' in text:
             raise UsernameNotExistsException()
         
         if '信息缺失，无法重置密码，请联系管理员重置' in text:
             return Contact(None, None)
 
-        pattern = 'id="phone" name="phone" type="hidden" value="'
+        pattern = 'name="showPhone" type="text" value="'
         start = response.text.find(pattern) + len(pattern)
         if response.text[start] == '"':
             phone = None
@@ -400,7 +414,7 @@ class Gzhmu:
             end = response.text.find('"', start)
             phone = response.text[start:end]
 
-        pattern = 'id="email" name="email" type="hidden" value="'
+        pattern = 'name="showEmail" type="text" value="'
         start = response.text.find(pattern) + len(pattern)
         if response.text[start] == '"':
             email = None

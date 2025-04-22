@@ -36,6 +36,8 @@ pip3 install -r requirements.txt
 
 - 获取指定账号的联系方式
 
+注意：从2025年4月开始，学校官网的找回密码页面已经修复了显示完整手机号和邮箱的漏洞，通过此方式获取到的手机号从第4到第7位共4位数字，邮箱的第3到第5个共3个字符会被星号"\*"取代而不可见。例如：123\*\*\*\*4567，ab\*\*\*cde@example.com。
+
 ```python
 from gzhmu import *
 account = 'xxxxxxxxxx'  # 将这里的xxxxxxxxxx替换为需要查询的账号
