@@ -216,7 +216,7 @@ def loadUserInfo(account: Union[str, int], webvpn=None, **kwargs) -> UserInfo:
     :param kwargs: Arguments for requests.request method.
     :return An object of UserInfo.
     """
-    url = 'http://192.168.12.3:801/eportal/portal/page/loadUserInfo?lang=en&program_index=1&page_index=voRYWy1627029238&wlan_user_ip=&wlan_user_mac=&jsVersion=&user_account=%s'
+    url = 'http://192.168.12.3:801/eportal/portal/page/loadUserInfo?lang=en&program_index=u7abhz1627029029&page_index=HYG6eX1745487870&wlan_user_ip=&wlan_user_mac=&jsVersion=&user_account=%s'
     url = url % account
 
     response_json = request_api(url, webvpn=webvpn, **kwargs)
@@ -246,7 +246,7 @@ def loadOnlineDevices(account: Union[str, int], webvpn=None, **kwargs) -> List[D
     :param kwargs: Arguments for requests.request method.
     :return A list of objects of Device.
     """
-    url = 'http://192.168.12.3:801/eportal/portal/page/loadOnlineRecord?lang=en&program_index=1&page_index=voRYWy1627029238&wlan_user_ip=&wlan_user_mac=&start_time=0&end_time=0&start_rn=1&end_rn=5&jsVersion=&user_account=%s'
+    url = 'http://192.168.12.3:801/eportal/portal/page/loadOnlineRecord?lang=en&program_index=u7abhz1627029029&page_index=HYG6eX1745487870&wlan_user_ip=&wlan_user_mac=&start_time=0&end_time=0&start_rn=1&end_rn=5&jsVersion=&user_account=%s'
     url = url % account
 
     response_json = request_api(url, webvpn=webvpn, **kwargs)

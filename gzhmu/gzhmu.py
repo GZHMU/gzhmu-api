@@ -352,7 +352,7 @@ class Gzhmu:
 
     @staticmethod
     def get_contact(username: Union[str, int], 
-                    webvpn: Optional[bool] = True, 
+                    webvpn: Optional[bool] = False, 
                     **kwargs) -> Contact:
         """Get the contact of a specific user.
 
@@ -380,6 +380,9 @@ class Gzhmu:
             url = Gzhmu.encrypt_url(url)
         gmu = Gzhmu(username, webvpn=webvpn, proxies=kwargs.get('proxies'), verify=kwargs.get('verify'))
         response = gmu.get(url, **kwargs)
+
+        if webvpn and '您使用的是校内地址' in response.content.decode('utf-8'):
+                raise OnCampusNetworkException()
 
         data = {
             'execution': Gzhmu.__get_execution(response.text, 'passwordManagementForm'),
