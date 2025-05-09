@@ -26,6 +26,11 @@ class NotLoggedInOrLoginExpiredException(Exception):
         super().__init__(*args)
 
 
+class InvalidCheckInUrlException(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
 class ReserveException(Exception):
     def __init__(self, *args):
         super().__init__(*args)
@@ -71,7 +76,7 @@ class Seat:
         self.seat_number = int(re.search(r'\D(\d+)$', seat_name).group(1))
 
     def __repr__(self):
-        return f'{__name__}.{Seat.__name__}(seat_id = {self.seat_id}, seat_name = {repr(self.seat_name)})'
+        return f'{Seat.__name__}(seat_name = {repr(self.seat_name)})'
 
 
 class Room:
@@ -83,7 +88,7 @@ class Room:
     :param & data room_name: Room name.
     :param & data seats: A list of Seat objects.
 
-    :func get_seat_with_number: Get a Seat object using a seat number.
+    :func get_seat_by_number: Get a Seat object by a seat number.
     """
     def __init__(self, 
             lib_id: int, lib_name: str, 
@@ -95,7 +100,7 @@ class Room:
         self.room_name = room_name
         self.seats = seats
     
-    def get_seat_with_number(self, no: int) -> Seat:
+    def get_seat_by_number(self, no: int) -> Seat:
         no = int(no)
         for seat in self.seats:
             if seat.seat_number == no:
@@ -103,7 +108,7 @@ class Room:
         raise TargetSeatNotFoundException()
 
     def __repr__(self):
-        return f'{__name__}.{Room.__name__}(room_id = {self.room_id}, room_name = {repr(self.room_name)})'
+        return f'{Room.__name__}(room_name = {repr(self.room_name)})'
 
 
 class Library:
@@ -119,7 +124,7 @@ class Library:
         self.rooms = rooms
 
     def __repr__(self):
-        return f'{__name__}.{Library.__name__}(lib_id = {self.lib_id}, lib_name = {repr(self.lib_name)})'
+        return f'{Library.__name__}(lib_name = {repr(self.lib_name)})'
 
 
 class Record:
@@ -147,11 +152,11 @@ class Record:
         self.end = end
 
     def __repr__(self):
-        return f'{__name__}.{Record.__name__}(owner = {repr(self.owner)}, seat = {repr(self.seat.seat_name)})'
+        return f'{Record.__name__}(owner = {repr(self.owner)}, seat = {repr(self.seat.seat_name)})'
 
 
 class UserRecord(Record):
-    """Public reservation record with reserve_id and reserve_at data.
+    """Public reservation record with reserve_id.
 
     :param & data reserve_id: The ID of this reservation record.
     :param & data seat: Seat object.
@@ -168,7 +173,7 @@ class UserRecord(Record):
         self.reserve_id = reserve_id
 
     def __repr__(self):
-        return f'{__name__}.{UserRecord.__name__}(owner = {repr(self.owner)}, seat = {repr(self.seat.seat_name)})'
+        return f'{UserRecord.__name__}(owner = {repr(self.owner)}, seat = {repr(self.seat.seat_name)})'
 
 
 class PrivateNewUserRecord(UserRecord):
@@ -196,7 +201,7 @@ class PrivateNewUserRecord(UserRecord):
         self.is_checked_in = is_checked_in
 
     def __repr__(self):
-        return f'{__name__}.{PrivateNewUserRecord.__name__}(owner = {repr(self.owner)}, seat = {repr(self.seat.seat_name)}, reserve_at = {self.reserve_at.ctime()})'
+        return f'{PrivateNewUserRecord.__name__}(owner = {repr(self.owner)}, seat = {repr(self.seat.seat_name)}, reserve_at = {self.reserve_at.ctime()})'
 
 
 class PrivateFinishedRecord(Record):
@@ -223,13 +228,12 @@ class PrivateFinishedRecord(Record):
             leave_at: datetime.datetime):
         super().__init__(seat, accno, owner, is_validated, title, start, end)
         self.reserve_at = reserve_at
-        self.is_validated = is_validated
         self.is_checked_in = is_checked_in
         self.is_default = is_default
         self.leave_at = leave_at
 
     def __repr__(self):
-        return f'{__name__}.{PrivateFinishedRecord.__name__}(owner = {repr(self.owner)}, seat = {repr(self.seat.seat_name)}, reserve_at = {self.reserve_at.ctime()})'
+        return f'{PrivateFinishedRecord.__name__}(owner = {repr(self.owner)}, seat = {repr(self.seat.seat_name)}, reserve_at = {self.reserve_at.ctime()})'
 
 
 class SeatInfo:
@@ -249,7 +253,7 @@ class SeatInfo:
         self.records = records
 
     def __repr__(self):
-        return f'{__name__}.{SeatInfo.__name__}(seat = {repr(self.seat.seat_name)}, is_open = {repr(self.is_open)})'
+        return f'{SeatInfo.__name__}(seat = {repr(self.seat.seat_name)}, is_open = {repr(self.is_open)})'
 
 
 class CurrentUserInfo:
@@ -270,7 +274,7 @@ class CurrentUserInfo:
         self.score = score
 
     def __repr__(self):
-        return f'{__name__}.{CurrentUserInfo.__name__}(username = {repr(self.username)}, name = {repr(self.name)}, department = {repr(self.department)}, score = {self.score})'
+        return f'{CurrentUserInfo.__name__}(username = {repr(self.username)}, name = {repr(self.name)}, department = {repr(self.department)}, score = {self.score})'
 
 
 class GmuLib(Gzhmu):
@@ -302,10 +306,9 @@ class GmuLib(Gzhmu):
         >>> res = lib.login()
         >>> # You can get a room name from the previous example.
         >>> room_name = 'xxx'
-        >>> room_list = lib.get_room_with_name(room_name)
-        >>> room = room_list[0]
+        >>> room = lib.get_room_by_name(room_name)
         >>> seat_number = 20
-        >>> seat = room.get_seat_with_number(seat_number)
+        >>> seat = room.get_seat_by_number(seat_number)
         >>> url = GmuLib.get_check_in_url(seat)
         >>> print(url)
         http://update.unifound.net/wxnotice/s.aspx?c=100492751_Seat_100495246_1EQ
@@ -318,7 +321,7 @@ class GmuLib(Gzhmu):
         >>> lib = GmuLib(username, password)
         >>> res = lib.login()
         >>> check_in_url = 'http://update.unifound.net/wxnotice/s.aspx?c=100492751_Seat_100495246_1EQ'
-        >>> seat = lib.get_seat_with_check_in_url(check_in_url)
+        >>> seat = lib.get_seat_by_check_in_url(check_in_url)
         >>> print('{} {} {}号座'.format(seat.lib_name, seat.room_name, seat.seat_number))
 
     Get the latest reservation records of the current user:
@@ -386,19 +389,17 @@ class GmuLib(Gzhmu):
         >>> lib = GmuLib(username, password)
         >>> res = lib.login()
         >>> library_name = 'xxx'
-        >>> library_list = lib.get_library_with_name(library_name)
-        >>> library = library_list[0]
+        >>> library = lib.get_library_by_name(library_name)
         >>> # Get the realtime information of all the seats in the specified library.
         >>> seat_info_list = lib.get_seat_info(library)
         >>> 
         >>> room_name = 'xxx'
-        >>> room_list = lib.get_room_with_name(room_name)
-        >>> room = room_list[0]
+        >>> room = lib.get_room_by_name(room_name)
         >>> # Get the realtime information of all the seats in the specified room.
         >>> seat_info_list = lib.get_seat_info(room)
         >>> 
         >>> seat_number = 20
-        >>> seat = room.get_seat_with_number(seat_number)
+        >>> seat = room.get_seat_by_number(seat_number)
         >>> # Get the realtime information of the specified seat.
         >>> seat_info_list = lib.get_seat_info(seat)
         >>> 
@@ -443,8 +444,7 @@ class GmuLib(Gzhmu):
         >>> lib = GmuLib(username, password)
         >>> res = lib.login()
         >>> seat_name = 'xxx'
-        >>> seat_list = lib.get_seat_with_name(seat_name)
-        >>> seat = seat_list[0]
+        >>> seat = lib.get_seat_by_name(seat_name)
         >>> date = datetime.today().date()  # Set date to today
         >>> start = time(17, 0)  # Set start time to 17:00
         >>> end = time(17, 30)  # Set end time to 17:30
@@ -586,7 +586,7 @@ class GmuLib(Gzhmu):
         response = self.get(home_url)
         if urlparse(response.url).hostname == 'sso.gzhmu.edu.cn':
             raise NotLoggedInOrLoginExpiredException()
-        room_info = re.findall(r'lab_(\d+).+?roomId=(\d+)&roomName=([^"]+)"', 
+        room_info = re.findall(r'lab_(\d+).+?roomId=(\d+).+?roomName=([^"]+)"', 
                                response.text)
         panyu_lib_rooms = []
         yuexiu_lib_rooms = []
@@ -640,12 +640,12 @@ class GmuLib(Gzhmu):
                                 panyu_lib_rooms)
         yuexiu_library = Library(GmuLib.LIBRARY_ID_YUEXIU, GmuLib.LIBRARY_NAME_YUEXIU, 
                                  yuexiu_lib_rooms)
-        self.__libraries = (panyu_library, yuexiu_library)
+        self.__libraries = [panyu_library, yuexiu_library]
         
         return self.__libraries
 
-    def get_library_with_id(self, lib_id: int) -> Library:
-        """Get a Library with library ID.
+    def get_library_by_id(self, lib_id: int) -> Library:
+        """Get a Library by library ID.
 
         :param lib_id: The library ID.
         :return A Library object.
@@ -656,21 +656,20 @@ class GmuLib(Gzhmu):
                 return library
         raise TargetLibraryNotFoundException()
 
-    def get_library_with_name(self, lib_name: str) -> List[Library]:
-        """Get a list of Librarys with library name.
+    def get_library_by_name(self, lib_name: str) -> Library:
+        """Get a Library by library name.
 
         :param lib_name: The library name.
-        :return A list of Library objects whose names match 
+        :return A Library object whose name match 
             with the specified library name.
         """
-        libraries = []
         for library in self.get_libraries():
             if library.lib_name == lib_name:
-                libraries.append(library)
-        return libraries
+                return library
+        raise TargetLibraryNotFoundException()
 
-    def get_room_with_id(self, room_id: int) -> Room:
-        """Get a Room with room ID.
+    def get_room_by_id(self, room_id: int) -> Room:
+        """Get a Room by room ID.
 
         :param room_id: The room ID.
         :return A Room object.
@@ -682,22 +681,21 @@ class GmuLib(Gzhmu):
                     return room
         raise TargetRoomNotFoundException()
 
-    def get_room_with_name(self, room_name: str) -> List[Room]:
-        """Get a list of Rooms with with room name.
+    def get_room_by_name(self, room_name: str) -> Room:
+        """Get a Room by room name.
 
         :param room_name: The room name.
-        :return A list of Room objects whose names match 
+        :return A Room object whose name match 
             with the specifed room name.
         """
-        rooms = []
         for library in self.get_libraries():
             for room in library.rooms:
                 if room_name in room.room_name:
-                    rooms.append(room)
-        return rooms
+                    return room
+        raise TargetRoomNotFoundException()
 
-    def get_seat_with_id(self, seat_id: int) -> Seat:
-        """Get a Seat with seat ID.
+    def get_seat_by_id(self, seat_id: int) -> Seat:
+        """Get a Seat by seat ID.
 
         :param seat_id: The seat ID.
         :param A Seat object.
@@ -710,22 +708,21 @@ class GmuLib(Gzhmu):
                         return seat
         raise TargetSeatNotFoundException()
 
-    def get_seat_with_name(self, seat_name: str) -> List[Seat]:
-        """Get a list of seats with seat name.
+    def get_seat_by_name(self, seat_name: str) -> Seat:
+        """Get a seat by seat name.
 
         :param seat_name: A seat name.
-        :return A list of Seat objects whose names match 
+        :return A Seat object whose name match 
             with the specified seat name.
         """
-        seats = []
         for library in self.get_libraries():
             for room in library.rooms:
                 for seat in room.seats:
                     if seat_name in seat.seat_name:
-                        seats.append(seat)
-        return seats
+                        return seat
+        raise TargetSeatNotFoundException()
 
-    def get_seat_with_check_in_url(self, url: str) -> Seat:
+    def get_seat_by_check_in_url(self, url: str) -> Seat:
         """Get a Seat object from a check in URL.
 
         :param url: The URL to check in.
@@ -737,13 +734,13 @@ class GmuLib(Gzhmu):
         lib_id = int(result.group(1))
         seat_id = int(result.group(2))
         try:
-            library = self.get_library_with_id(lib_id)
-            seat = self.get_seat_with_id(seat_id)
+            library = self.get_library_by_id(lib_id)
+            seat = self.get_seat_by_id(seat_id)
             if library.lib_id == seat.lib_id:
                 return seat
         except (TargetLibraryNotFoundException, TargetSeatNotFoundException):
             pass
-        raise Exception(f'not a valid check in URL, "{url}"')
+        raise InvalidCheckInUrlException(url)
 
     def get_seat_info(self, 
             target: Optional[Union[None, Library, Room, Seat]] = None, 
@@ -866,7 +863,7 @@ class GmuLib(Gzhmu):
     def get_today_reserve_records(self) -> List[UserRecord]:
         """Get all the not outdated reservation records today.
 
-        :return A list of UserRecord objects that contain a reserve_id.
+        :return A list of UserRecord objects.
         """
         url = 'https://ggyy.gzhmu.edu.cn/clientweb/xcus/ic2/index.aspx'
         response = self.get(url)
@@ -878,7 +875,7 @@ class GmuLib(Gzhmu):
         records = []
         for record_raw_text in re.findall(r'<li date=.+?</li>', text):
             reserve_id = int(re.search(r"id='rsv_(\d+?)'", record_raw_text).group(1))
-            room_name = re.search(r'<div><div class=.+>(.+?)&nbsp;<span', 
+            seat_name = re.search(r'<div><div class=.+>(.+?)&nbsp;<span', 
                                   record_raw_text).group(1)
             is_validated = '已生效' in record_raw_text
             start = re.search(r"<li date='([\d\- :]+?)'", record_raw_text).group(1)
@@ -886,7 +883,7 @@ class GmuLib(Gzhmu):
             end = re.search(r' - ([\d\- :]+?)</div></li>', record_raw_text).group(1)
             end = str(start.year) + '-' + end
             end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M')
-            seat_info = seat_info_dict.get(room_name)
+            seat_info = seat_info_dict.get(seat_name)
             if seat_info is None:
                 continue
             for record in seat_info.records:
@@ -935,7 +932,7 @@ class GmuLib(Gzhmu):
             is_checked_in = '已签到' in record_raw_text
             title = re.search(r'<h3>(.*?)</h3>', record_raw_text).group(1)
             seat_name = re.search(r'<a>(.+?)</a>', record_raw_text).group(1)
-            seat = self.get_seat_with_name(seat_name)[0]
+            seat = self.get_seat_by_name(seat_name)
             name = re.search(r'</div</div></td><td>(.+?)</td><td>', 
                                  record_raw_text).group(1)
             start = re.search(r"开始:</span> <span class='text-primary'>([\d\- :]+?)</span>", 
@@ -992,12 +989,12 @@ class GmuLib(Gzhmu):
 
     def reserve(self, seat: Seat, date: datetime.date, 
             start: datetime.time, end: datetime.time) -> bool:
-        """Reserve a specified seat with specified time.
+        """Reserve a specified seat.
 
         :param seat: A Seat object designating the seat.
         :param date: The date to reserve, should be today or tomorrow.
-        :param start: To specify the start time.
-        :param end: To specify the end time.
+        :param start: To specify the start time of the reservation.
+        :param end: To specify the end time of the reservation.
         :return Whether reserve successfully or not.
         """
         if end.hour * 60 + end.minute - (start.hour * 60 + start.minute) < 30:
@@ -1042,8 +1039,7 @@ class GmuLib(Gzhmu):
             if 'ERRMSG_RESV_CONFLICT' in msg:
                 raise ReserveConflictException()
 
-        ret = response.json()['ret']
-        return ret == 1
+        return False
 
     def check_in(self, reserve_record: UserRecord) -> bool:
         """Check in the reserved seat.
@@ -1088,7 +1084,9 @@ class GmuLib(Gzhmu):
         url = f'https://ggyy.gzhmu.edu.cn/ClientWeb/pro/ajax/reserve.aspx?act=resv_leave&type=2&resv_id={reserve_record.reserve_id}'
         response = self.get(url)
         now = datetime.datetime.now()
-        if reserve_record.start > now or reserve_record.end < now:
+        validated_time_before_reservation_start = datetime.timedelta(minutes=15)
+        if (reserve_record.start - validated_time_before_reservation_start > now
+                or reserve_record.end < now):
             return False
         if '获取预约的设备失败' in response.text:
             return False
