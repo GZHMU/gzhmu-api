@@ -49,6 +49,8 @@ except UsernameNotExistsException:
     print('账号不存在')
 ```
 
+当使用非校园网内网访问时需要使用Web VPN，即使用get_contact()方法要指定webvpn参数为**True**。使用校园网访问时则无须显式指定，因为webvpn参数默认为**False**。
+
 - 在内网获取学籍卡片
 
 ```python
@@ -207,12 +209,20 @@ print('姓名：', userInfo.name)
 print('余额：', userInfo.balance, '元')
 print('已使用流量：', userInfo.use_flow, 'MB')
 print('剩余流量：', userInfo.available_flow, 'MB')
-vpn.logou()
+vpn.logout()
 ```
 
-注意：当在使用**非校园网**访问校园网内网资源或调用gmuapi模块中的接口时**必须**使用Web VPN访问，相反，若连接**校园网内网**则**不能**使用Web VPN访问。而在非校园网使用gmulib模块访问图书馆接口，直链或使用Web VPN皆可。
+注意：当在使用**非校园网**访问校园网内网资源或调用gmuapi模块中的接口时**必须**使用Web VPN访问，相反，若连接**校园网内网**则**不能**使用Web VPN访问。而在非校园网使用gmulib模块访问图书馆接口，直接访问或使用Web VPN皆可。
 
 ### 4.3. **gmulib**模块示例
+
+访问图书馆需要登录，所以使用本模块访问图书馆前需要进行登录。
+
+使用本模块进行获取座位信息、获取座位签到链接、预约座位等操作都需要使用Seat类的实例作为传入参数，Seat类是对图书馆座位的封装，包含字段：lib_id, lib_name, room_id, room_name, seat_id, seat_name, seat_number，分别表示所在图书馆ID、所在图书馆名称、所在研修室ID、所在研修室名称、座位ID、座位名称、本座位在其所在研修室中的座位号。
+
+类似的，本模块中的Library和Room类也分别是对图书馆和研修室的封装，包含了ID及名称等相关信息。不同的是，Library对象有一个rooms字段，是一个元素为Room对象的列表，表示图书馆中的所有研修室；Room对象有一个seats字段，是一个元素为Seat对象的列表，表示该研修室中的所有座位。
+
+不同座位的座位ID(seat_id)和座位名称(seat_name)都是不同的，所以如果知道某个座位的确切ID或名称，则可以直接通过get_seat_by_id()或get_seat_by_name()方法分别获取，如果均不确定，则需要使用遍历的方法获取Seat对象，例如，可以先遍历所有研修室(Room)，然后再从某个研修室中获取特定座位(Seat)。
 
 - 列出各图书馆的各个研修室名称
 
@@ -237,11 +247,11 @@ username = 'xxxxxxxxxx'
 password = 'xxxxxxxxxx'
 lib = GmuLib(username, password)
 res = lib.login()
+# 具体的研修室名称可以从上个示例中获取
 room_name = '1楼自修区Ⅰ(越秀）'
-room_list = lib.get_room_with_name(room_name)
-room = room_list[0]
+room = lib.get_room_by_name(room_name)
 seat_number = 20
-seat = room.get_seat_with_number(seat_number)
+seat = room.get_seat_by_number(seat_number)
 url = GmuLib.get_check_in_url(seat)  # 越秀图书馆1楼自修区Ⅰ 20号座位
 print(url)
 ```
@@ -255,7 +265,7 @@ password = 'xxxxxxxxxx'
 lib = GmuLib(username, password)
 res = lib.login()
 check_in_url = 'http://update.unifound.net/wxnotice/s.aspx?c=100492751_Seat_100495246_1EQ'
-seat = lib.get_seat_with_check_in_url(check_in_url)
+seat = lib.get_seat_by_check_in_url(check_in_url)
 print('{} {} {}号座'.format(seat.lib_name, seat.room_name, seat.seat_number))
 ```
 
@@ -324,16 +334,14 @@ username = 'xxxxxxxxxx'
 password = 'xxxxxxxxxx'
 lib = GmuLib(username, password)
 res = lib.login()
-library_list = lib.get_library_with_name('越秀校区图书馆')
-library = library_list[0]
+library = lib.get_library_by_name('越秀校区图书馆')
 seat_info_list = lib.get_seat_info(library)  # 获取越秀图书馆所有座位的实时信息
 
-room_list = lib.get_room_with_name('1楼自修区Ⅰ(越秀）')
-room = room_list[0]
+room = lib.get_room_by_name('1楼自修区Ⅰ(越秀）')
 seat_info_list = lib.get_seat_info(room)  # 获取指定研修室的所有座位的实时信息
 
 # seat_number = 20
-# seat = room.get_seat_with_number(seat_number)
+# seat = room.get_seat_by_number(seat_number)
 # seat_info_list = lib.get_seat_info(seat)  # 获取指定座位的实时信息
 
 for seat_info in seat_info_list:
@@ -380,8 +388,7 @@ username = 'xxxxxxxxxx'
 password = 'xxxxxxxxxx'
 lib = GmuLib(username, password)
 res = lib.login()
-seat_list = lib.get_seat_with_name('（越秀）自修区Ⅰ-020')
-seat = seat_list[0]
+seat = lib.get_seat_by_name('（越秀）自修区Ⅰ-020')
 date = datetime.today().date()  # 日期为今天
 start = time(17, 0)  # 开始时间为17:00
 end = time(17, 30)  # 结束时间为17:30
