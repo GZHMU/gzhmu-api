@@ -173,6 +173,8 @@ class Gzhmu:
     key = b'wrdvpnisthebest!'
     iv = b'wrdvpnisthebest!'
 
+    maxRetries = 10
+
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.5410.0 Safari/537.36',
     }
@@ -203,7 +205,6 @@ class Gzhmu:
 
         self.__session = requests.session()
         self.__ticket = None
-        self.__access_token = None
 
     @staticmethod
     def is_valid_username(username: Union[str, int]) -> bool:
@@ -212,9 +213,9 @@ class Gzhmu:
         :param useranme: The username to check.
         :returns The result show that whether the username is valid.
         """
-        return (isinstance(username, int) or \
-               isinstance(username, str)) and \
-               re.match(r'[0-9]{10}', str(username)) is not None
+        return ((isinstance(username, int)
+                or isinstance(username, str))
+                and re.match(r'[0-9]{10}', str(username)) is not None)
  
     @staticmethod
     def is_valid_password(password: str) -> bool:
@@ -234,8 +235,8 @@ class Gzhmu:
         """
         url = 'https://portal.gzhmu.edu.cn/portal'
         response = requests.get(url, allow_redirects=False, **kwargs)
-        return not (response.status_code == requests.codes.FOUND and \
-                    response.headers.get('Location') == 'https://webvpn.gzhmu.edu.cn/https/77726476706e69737468656265737421e0f85388263c2657640084b9d6502720b7aa6c/portal')
+        return (not (response.status_code == requests.codes.FOUND
+                and response.headers.get('Location') == 'https://webvpn.gzhmu.edu.cn/https/77726476706e69737468656265737421e0f85388263c2657640084b9d6502720b7aa6c/portal'))
 
     @staticmethod
     def __get_execution(html: str, formid: str) -> str:
@@ -308,8 +309,7 @@ class Gzhmu:
         port = parsed_result.port
 
         encrypted_host = Gzhmu.encrypt_host(host)
-        path = '/'.join(['/'+protocol+('-'+str(port) if port else ''), 
-                         encrypted_host])
+        path = '/'.join(['/'+protocol+('-'+str(port) if port else ''), encrypted_host])
         path += parsed_result.path
         url = urlunparse(('https', 'webvpn.gzhmu.edu.cn', path) + parsed_result[3:])
         return url
@@ -382,32 +382,37 @@ class Gzhmu:
         response = gmu.get(url, **kwargs)
 
         if webvpn and '您使用的是校内地址' in response.content.decode('utf-8'):
-                raise OnCampusNetworkException()
+            raise OnCampusNetworkException()
 
         data = {
             'execution': Gzhmu.__get_execution(response.text, 'passwordManagementForm'),
             '_eventId': 'customResetPassword'
         }
         response = gmu.post(url, data=data, **kwargs)
-
         data = {
             'username': username,
-            'captcha': gmu.bypass_captcha(),
+            'captcha': 0,
             'execution': Gzhmu.__get_execution(response.text, 'resetPasswordForm'),
             '_eventId': 'submit',
             'submit': None
         }
-        response = gmu.post(url, data=data, **kwargs)
-        text = response.content.decode('utf-8')
 
-        if '验证码不正确' in text:
+        # Retry verification code.
+        for i in range(Gzhmu.maxRetries):
+            data['captcha'] = gmu.bypass_captcha()
+            response = gmu.post(url, data=data, **kwargs)
+            text = response.content.decode('utf-8')
+
+            if '验证码不正确' in text:
+                continue
+            if '账号不存在' in text:
+                raise UsernameNotExistsException()
+            if '信息缺失，无法重置密码，请联系管理员重置' in text:
+                return Contact(None, None)
+            break
+
+        else:
             raise IncorrectVerificationCodeException()
-
-        if '账号不存在' in text:
-            raise UsernameNotExistsException()
-        
-        if '信息缺失，无法重置密码，请联系管理员重置' in text:
-            return Contact(None, None)
 
         pattern = 'name="showPhone" type="text" value="'
         start = response.text.find(pattern) + len(pattern)
@@ -516,7 +521,8 @@ class Gzhmu:
         url = 'https://sso.gzhmu.edu.cn/cas/login?service=' + service
         response = self.get(url)
         response_hostname = urlparse(response.url).hostname
-        is_on_campus_network_needed = response_hostname != urlparse(url).hostname and response_hostname == 'webvpn.gzhmu.edu.cn'
+        is_on_campus_network_needed = (response_hostname != urlparse(url).hostname
+                                       and response_hostname == 'webvpn.gzhmu.edu.cn')
         if is_on_campus_network_needed and not self.__webvpn:
             raise NotOnCampusNetworkException()
         elif not is_on_campus_network_needed and self.__webvpn:
@@ -562,15 +568,12 @@ class Gzhmu:
             raise EmptyUsernameException()
         if self.__password is None:
             raise EmptyPasswordException()
-        '''
-        is_on_campus_network = Gzhmu.is_on_campus_network()
-        if is_on_campus_network and self.__webvpn:
-            raise OnCampusNetworkException()
-        if not is_on_campus_network and not self.__webvpn:
-            raise NotOnCampusNetworkException()
-        '''
+
         query = {'service': service}
         login_url = 'https://sso.gzhmu.edu.cn/cas/login?' + urlencode(query)
+
+        # Access service URL to set relevant cookies.
+        self.get(service)
 
         login_html = self.get_login_html(service)
         execution = Gzhmu.__get_execution(login_html, 'fm1')
@@ -581,8 +584,6 @@ class Gzhmu:
             self.get(login_url, allow_redirects=False)
             return True
 
-        captcha_result = self.bypass_captcha()
-
         # RSA encryption
         rsa_key_url = 'https://sso.gzhmu.edu.cn/cas/encrypt/getRasKey'
         response = self.get(rsa_key_url)
@@ -592,31 +593,42 @@ class Gzhmu:
         encrypted_username = base64.b64encode(cipher.encrypt(self.__username.encode('utf-8')))
         encrypted_password = base64.b64encode(cipher.encrypt(self.__password.encode('utf-8')))
 
-        # Post login form data
         formdata = {
             'username': encrypted_username,
             'password': encrypted_password,
-            'captcha': captcha_result,
+            'captcha': 0,
             '_eventId': 'submit',
             'geolocation': '',
             'execution': execution,
         }
-        response = self.post(login_url, data=formdata, allow_redirects=self.__webvpn)
 
-        # Check login result
-        html = response.content.decode('utf-8')
-        if response.status_code == requests.codes.UNAUTHORIZED:
+        # Retry verification code.
+        for i in range(Gzhmu.maxRetries):
+            formdata['captcha'] = self.bypass_captcha()
+
+            # Post login form data
+            response = self.post(login_url, data=formdata, allow_redirects=self.__webvpn)
+
+            # Check login result
+            html = response.content.decode('utf-8')
             alert_pattern = '<div class="alert alert-danger">'
             alert_start = html.find(alert_pattern)
-            if alert_start == -1:
+            if alert_start != -1:
+                alert_end = response.text.find('</div>', alert_start)
+                msg = html[alert_start:alert_end]
+                if (response.status_code == requests.codes.UNAUTHORIZED
+                        and '用户名或密码错误，请检查后重试！' in msg):
+                    raise IncorrectCredentialException()
+                if (response.status_code == requests.codes.OK
+                        and '验证码错误' in msg):
+                    continue
+            elif response.status_code == requests.codes.UNAUTHORIZED:
                 raise LoginFailedException('unknow failure, alert message not found')
-            alert_end = response.text.find('</div>', alert_start)
-            msg = html[alert_start:alert_end]
+            break
 
-            if '用户名或密码错误，请检查后重试！' in msg:
-                raise IncorrectCredentialException()
-            elif '验证码错误' in msg:
-                raise IncorrectVerificationCodeException()
+        else:
+            raise LoginFailedMaxRetriesException()
+
 
         # Authorize Web VPN
         if self.__webvpn:
@@ -626,7 +638,6 @@ class Gzhmu:
             response = self.get(login_url, allow_redirects=False)
  
         # Get login ticket
-        location_with_ticket = None
         is_first_ticket = True
         while response.status_code in [requests.codes.FOUND, 
                                        requests.codes.MOVED_PERMANENTLY]:
@@ -640,7 +651,6 @@ class Gzhmu:
             if ticket is not None and is_first_ticket:
                 self.__ticket = ticket[0]
                 is_first_ticket = False
-                location_with_ticket = location
             response = self.get(location, allow_redirects=False)
 
         if response.status_code not in [requests.codes.OK, 
@@ -656,7 +666,6 @@ class Gzhmu:
             url = 'https://webvpn.gzhmu.edu.cn/logout'
             self.get(url)
             self.__ticket = None
-            self.__access_token = None
             self.__session.cookies.clear()
             return
 
@@ -667,7 +676,6 @@ class Gzhmu:
         self.get(url)
 
         self.__ticket = None
-        self.__access_token = None
         self.__session.cookies.clear()
 
     def request(self, method: str, url: str, 
@@ -693,8 +701,8 @@ class Gzhmu:
         :returns A requests.Response object.
         """
         if use_encrypt is None:
-            if not urlparse(url).hostname == 'webvpn.gzhmu.edu.cn' \
-                    and self.__webvpn:
+            if (not urlparse(url).hostname == 'webvpn.gzhmu.edu.cn'
+                    and self.__webvpn):
                 url = Gzhmu.encrypt_url(url)
         elif use_encrypt:
             url = Gzhmu.encrypt_url(url)
