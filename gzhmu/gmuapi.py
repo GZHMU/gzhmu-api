@@ -52,6 +52,13 @@ Examples:
         >>> logout()
         True
 
+    Check if MAC address is bound to an account for non-perceptional authentication:
+
+        >>> from gzhmu import checkMacBinding
+        >>> mac = 'aabbccddeeff'
+        >>> checkMacBinding(mac)
+        True
+
 Some APIs in this module, e.g. loadUserInfo, loadOnlineDevices and unbind, 
 can be rquested with web VPN by providing a webvpn parameter which is 
 an object of WebVPN, for example:
@@ -85,6 +92,10 @@ import requests
 
 default_user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.5746.284 Safari/537.36'
 
+programIndex = None
+pageIndex = None
+pageName = None
+
 
 class IncorrectAccountOrPasswordException(Exception):
     def __init__(self, *args):
@@ -92,6 +103,11 @@ class IncorrectAccountOrPasswordException(Exception):
 
 
 class AlreadyLoggedInException(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
+
+
+class FailedToLoadConfigException(Exception):
     def __init__(self, *args):
         super().__init__(*args)
 
@@ -149,7 +165,7 @@ def balance_cvt(balance: str) -> float:
 
 
 def flow_cvt(flow: str) -> float:
-    """Convert flow in format like "780MB" or "15GB" to float in MB"""
+    """Convert flow in format like "780MB" or "15GB" to float in MB, return -1 if "Unlimit" is given"""
     if flow.endswith('MB'):
         return float(flow[:-2])
     if flow.endswith('GB'):
@@ -158,6 +174,8 @@ def flow_cvt(flow: str) -> float:
         return float(flow[:-2]) * 1048576
     if flow.endswith('PB'):
         return float(flow[:-2]) * 1073741824
+    if flow == 'Unlimit':
+        return -1.0
 
 
 def request_api(url, webvpn=None, **kwargs) -> dict:
@@ -178,6 +196,26 @@ def request_api(url, webvpn=None, **kwargs) -> dict:
 
     response_json = json.loads(text)
     return response_json
+
+
+def loadConfig(webvpn=None, **kwargs):
+    """Load necessary parameters for loadUserInfo() and loadOnlineDevices() API
+
+    :param webvpn: An object of gzhmu.Gzhmu class. With this argument set, you 
+        can query this API via web VPN. But you have to log in the protal first.
+    :param kwargs: Arguments for requests.request method.
+    """
+    global programIndex
+    global pageIndex
+    global pageName
+    url = 'http://192.168.12.3:801/eportal/portal/page/loadConfig'
+    response_json = request_api(url, webvpn=webvpn, **kwargs)
+    code = response_json.get('code')
+    if code != 1:
+        raise FailedToLoadOnlineDevicesException()
+    programIndex = response_json['data']['program_index']
+    pageIndex = response_json['data']['page_index']
+    pageName = response_json['data']['page_name']
  
 
 def login(account: Union[str, int], password: str, webvpn=None, **kwargs) -> bool:
@@ -190,8 +228,7 @@ def login(account: Union[str, int], password: str, webvpn=None, **kwargs) -> boo
     :param kwargs: Arguments for requests.request method.
     :return True if succeed or False if fail.
     """
-    url = 'http://192.168.12.3:801/eportal/portal/login?lang=en&user_account=,0,%s&user_password=%s'
-    url = url % (account, password)
+    url = f'http://192.168.12.3:801/eportal/portal/login?lang=en&user_account=,0,{account}&user_password={password}'
 
     response_json = request_api(url, webvpn=webvpn, **kwargs)
     result = response_json.get('result')
@@ -216,8 +253,10 @@ def loadUserInfo(account: Union[str, int], webvpn=None, **kwargs) -> UserInfo:
     :param kwargs: Arguments for requests.request method.
     :return An object of UserInfo.
     """
-    url = 'http://192.168.12.3:801/eportal/portal/page/loadUserInfo?lang=en&program_index=u7abhz1627029029&page_index=HYG6eX1745487870&wlan_user_ip=&wlan_user_mac=&jsVersion=&user_account=%s'
-    url = url % account
+    if programIndex is None or pageIndex is None:
+        loadConfig()
+
+    url = f'http://192.168.12.3:801/eportal/portal/page/loadUserInfo?lang=en&program_index={programIndex}&page_index={pageIndex}&wlan_user_ip=&wlan_user_mac=&jsVersion=&user_account={account}'
 
     response_json = request_api(url, webvpn=webvpn, **kwargs)
     code = response_json.get('code')
@@ -236,7 +275,6 @@ def loadUserInfo(account: Union[str, int], webvpn=None, **kwargs) -> UserInfo:
         raise FailedToGetUserInfoException()
 
 
-
 def loadOnlineDevices(account: Union[str, int], webvpn=None, **kwargs) -> List[Device]:
     """Get online devices of the specified account.
 
@@ -246,8 +284,10 @@ def loadOnlineDevices(account: Union[str, int], webvpn=None, **kwargs) -> List[D
     :param kwargs: Arguments for requests.request method.
     :return A list of objects of Device.
     """
-    url = 'http://192.168.12.3:801/eportal/portal/page/loadOnlineRecord?lang=en&program_index=u7abhz1627029029&page_index=HYG6eX1745487870&wlan_user_ip=&wlan_user_mac=&start_time=0&end_time=0&start_rn=1&end_rn=5&jsVersion=&user_account=%s'
-    url = url % account
+    if programIndex is None or pageIndex is None:
+        loadConfig()
+
+    url = f'http://192.168.12.3:801/eportal/portal/page/loadOnlineRecord?lang=en&program_index={programIndex}&page_index={pageIndex}&wlan_user_ip=&wlan_user_mac=&start_time=0&end_time=0&start_rn=1&end_rn=5&jsVersion=&user_account={account}'
 
     response_json = request_api(url, webvpn=webvpn, **kwargs)
     code = response_json.get('code')
@@ -276,8 +316,7 @@ def unbind(account: Union[str, int], mac: str, webvpn=None, **kwargs) -> bool:
     :param kwargs: Arguments for requests.request method.
     :return The result whether the unbind is successful.
     """
-    url = 'http://192.168.12.3:801/eportal/portal/mac/unbind?user_account=%s&wlan_user_mac=%s'
-    url = url % (account, mac.upper())
+    url = f'http://192.168.12.3:801/eportal/portal/mac/unbind?user_account={account}&wlan_user_mac={mac.upper()}'
 
     response_json = request_api(url, webvpn=webvpn, **kwargs)
     result = response_json.get('result')
@@ -299,3 +338,17 @@ def logout(webvpn=None, **kwargs) -> bool:
     result = response_json.get('result')
 
     return result == 1
+
+
+def checkMacBinding(mac: str, webvpn=None, **kwargs) -> bool:
+    """Check if MAC address is bound to an account for non-perceptional authentication
+
+    :param webvpn: An object of gzhmu.Gzhmu class. With this argument set, you 
+        can query this API via web VPN. But you have to log in the protal first.
+    :param kwargs: Arguments for requests.request method.
+    :return Whether MAC address is bound to an account.
+    """
+    url = f'http://192.168.12.3:801/eportal/portal/perceive?wlan_user_ip=0.0.0.0&wlan_user_mac={mac.lower()}&data_format=0&jsVersion=&lang=en'
+    response_json = request_api(url, webvpn=webvpn, **kwargs)
+    result = response_json.get('result')
+    return result == 10

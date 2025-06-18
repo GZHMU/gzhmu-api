@@ -114,6 +114,13 @@ Below are some examples of gmuapi:
         >>> logout()
         True
 
+    Check if MAC address is bound to an account for non-perceptional authentication:
+
+        >>> from gzhmu import checkMacBinding
+        >>> mac = 'aabbccddeeff'
+        >>> checkMacBinding(mac)
+        True
+
     Some APIs in gmuzpi.py, e.g. loadUserInfo, loadOnlineDevices and unbind, 
     can be used with web VPN by providing a webvpn parameter which is 
     an object of WebVPN, for example:
@@ -404,8 +411,8 @@ from .gzhmu  import InvalidUsernameException, InvalidPasswordException, \
 from .gmuapi import IncorrectAccountOrPasswordException, AlreadyLoggedInException, \
                     FailedToGetUserInfoException, FailedToLoadOnlineDevicesException, \
                     RequestException, UserInfo, Device
-from .gmuapi import balance_cvt, flow_cvt, request_api, login, loadUserInfo, \
-                    loadOnlineDevices, unbind, logout
+from .gmuapi import balance_cvt, flow_cvt, request_api, loadConfig, login, loadUserInfo, \
+                    loadOnlineDevices, unbind, logout, checkMacBinding
 from .gmulib import TargetLibraryNotFoundException, TargetRoomNotFoundException, \
                     TargetSeatNotFoundException, NotLoggedInOrLoginExpiredException, \
                     ReserveException, ReserveConflictException, \
@@ -442,10 +449,12 @@ __all__ = [
     'flow_cvt', 
     'request_api', 
     'login', 
+    'loadConfig',
     'loadUserInfo', 
     'loadOnlineDevices', 
     'unbind', 
     'logout',
+    'checkMacBinding',
     'TargetLibraryNotFoundException',
     'TargetRoomNotFoundException',
     'TargetSeatNotFoundException',

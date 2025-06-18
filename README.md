@@ -115,10 +115,12 @@ account = 'xxxxxxxxxx'  # 将这里的xxxxxxxxxx替换为需要查询的账号
 try:
     userInfo = loadUserInfo(account)
 
+    use_flow = 'Unlimited' if userInfo.use_flow < 0 else f'{userInfo.use_flow} MB'
+    available_flow = 'Unlimited' if userInfo.available_flow < 0 else f'{userInfo.available_flow} MB'
     print('姓名：', userInfo.name)
     print('余额：', userInfo.balance, '元')
-    print('已使用流量：', userInfo.use_flow, 'MB')
-    print('剩余流量：', userInfo.available_flow, 'MB')
+    print('已使用流量：', use_flow)
+    print('剩余流量：', available_flow)
 except FailedToGetUserInfoException:
     print('无法获取用户信息，查询的账号不存在')
 ```
@@ -173,6 +175,8 @@ else:
 
 - 使用内网解绑设备（登出其他设备）
 
+解绑后的设备无法再使用无感登录，若要恢复无感登录，需要在该设备上重新手动登录，才能重新绑定，恢复无感登录。
+
 ```python
 from gzhmu import *
 
@@ -184,6 +188,18 @@ if result:
     print('成功解绑设备')
 else:
     print('解绑失败')
+```
+
+- 判断MAC地址是否绑定了账号用于无感登录
+
+```python
+from gzhmu import *
+mac = 'AABBCCDDEEFF'
+result = checkMacBinding(mac)
+if result:
+    print('该MAC已绑定账号，支持无感登录。')
+else:
+    print('该MAC未绑定账号，不支持无感登录。')
 ```
 
 以上**gmuapi**模块的API，例如`loadUserInfo`、`loadOnlineDevices`和`unbind`都能使用Web VPN在外网进行访问，只需要传入一个`webvpn`参数即可，这个参数是一个`WebVPN`类的实例，例如：
