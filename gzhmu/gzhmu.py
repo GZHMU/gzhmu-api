@@ -5,7 +5,6 @@ from typing import Union, Optional
 from urllib.parse import urlparse, urlunparse, urlencode, parse_qs
 
 import requests
-import numpy as np
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES, PKCS1_v1_5
 from PIL import Image
@@ -553,8 +552,7 @@ class Gzhmu:
         """
         captcha_bytes = self.get_captcha_img()
         image = Image.open(BytesIO(captcha_bytes))
-        captcha_array = np.array(image)
-        captcha_result = recognize(captcha_array)
+        captcha_result = recognize(image)
         return captcha_result
 
     def login(self, service: Optional[str] = 'https://portal.gzhmu.edu.cn/portal/login/') -> bool:

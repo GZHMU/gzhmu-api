@@ -1,17 +1,16 @@
 import os
-import numpy as np
 
-pattern_data = os.path.join(os.path.split(__file__)[0], 'data.pk')
+from PIL import Image
+
+from .data import pattern
 
 
-def recognize(img: np.ndarray) -> int:
+def recognize(img: Image) -> int:
     """Resolve the CAPTCHA.
 
     :param img: An image.
     :return An verification code.
     """
-    pattern = np.load(pattern_data, allow_pickle=True)
-
     left = 0
     max_rate = 0
     for i, n in enumerate(pattern['left_operand']):
@@ -19,7 +18,7 @@ def recognize(img: np.ndarray) -> int:
         total = 0
         for r, cols in n.items():
             for c in cols:
-                score += sum(img[r,c]) < 765
+                score += sum(img.getpixel((c,r))) < 765
             total += len(cols)
         rate = score / total
         if rate > max_rate:
@@ -35,7 +34,7 @@ def recognize(img: np.ndarray) -> int:
         total = 0
         for r, cols in n.items():
             for c in cols:
-                score += sum(img[r,c]) < 765
+                score += sum(img.getpixel((c,r))) < 765
             total += len(cols)
         rate = score / total
         if rate > max_rate:
@@ -51,7 +50,7 @@ def recognize(img: np.ndarray) -> int:
         total = 0
         for r, cols in n.items():
             for c in cols:
-                score += sum(img[r,c+pattern['gap']]) < 765
+                score += sum(img.getpixel((c+pattern['gap'],r))) < 765
             total += len(cols)
         rate = score / total
         if rate > max_rate:
