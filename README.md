@@ -137,7 +137,8 @@ try:
 
     print('IP\t\tMAC\t\tLogin Time')
     for device in devices:
-        print(device.login_ip, device.mac, time.strftime('%Y-%m-%d_%H:%M:%S'), sep='\t')
+        loginAt = time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(device.login_time))
+        print(device.login_ip, device.mac, loginAt, sep='\t')
 except FailedToLoadOnlineDevicesException:
     print('无法获取在线设备信息，查询的账号不存在')
 ```
