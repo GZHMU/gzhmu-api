@@ -115,6 +115,14 @@ class Gzhmu:
         >>> print('email:', contact.email)
         email: xxx
 
+    Check if a given phone number is bound to any account:
+
+        >>> from gzhmu import Gzhmu
+        >>> phone = 'xxxxxxxxxxx'
+        >>> result = Gzhmu.check_phone_binding(phone)
+        >>> print(phone, 'exists' if result else 'not exists')
+        xxxxxxxxxxx exists
+
     Log in the portal and get timetable without web VPN:
 
         >>> from gzhmu import Gzhmu
@@ -204,6 +212,11 @@ class Gzhmu:
 
         self.__session = requests.session()
         self.__ticket = None
+
+    @staticmethod
+    def is_valid_phone(phone: Union[str, int]) -> bool:
+        """Check if the given phone number is valid."""
+        return re.match(r'^1\d{10}$', str(phone)) is not None
 
     @staticmethod
     def is_valid_username(username: Union[str, int]) -> bool:
@@ -432,6 +445,36 @@ class Gzhmu:
                 email = None
 
         return Contact(phone, email)
+
+    @staticmethod
+    def check_phone_binding(phone: Union[int, str], 
+                            webvpn: Optional[bool] = False, 
+                            **kwargs) -> bool:
+        """Check if the given phone number is bound to any account.
+        
+        :param phone: A phone number.
+        :param webvpn: Whether to use web VPN, True to use web VPN.
+        :param kwargs: Arguments for requests.request method.
+        :return Does the phone number exists or not.
+        """
+        if not Gzhmu.is_valid_phone(phone):
+            return False
+
+        url = 'https://sso.gzhmu.edu.cn/cas/user/checkPhoneBind'
+        data = {'phone': str(phone)}
+        if webvpn:
+            url = Gzhmu.encrypt_url(url)
+        if kwargs.get('headers') is None:
+            kwargs['headers'] = Gzhmu.headers
+
+        response = requests.post(url, data=data, **kwargs)
+        result = response.json()
+        if result['errorCode'] == 'success':
+            return True
+        elif result['errorCode'] == 'error.userController.checkPhoneBind.phoneNotExist':
+            return False
+        else:
+            return False
 
     def get_username(self) -> str:
         """Get the current username.
