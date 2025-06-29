@@ -412,7 +412,7 @@ from .gmuapi import IncorrectAccountOrPasswordException, AlreadyLoggedInExceptio
                     FailedToGetUserInfoException, FailedToLoadOnlineDevicesException, \
                     RequestException, UserInfo, Device
 from .gmuapi import balance_cvt, flow_cvt, request_api, loadConfig, login, loadUserInfo, \
-                    loadOnlineDevices, unbind, logout, checkMacBinding
+                    loadOnlineDevices, loadOnlineDevices2, unbind, logout, checkMacBinding
 from .gmulib import TargetLibraryNotFoundException, TargetRoomNotFoundException, \
                     TargetSeatNotFoundException, NotLoggedInOrLoginExpiredException, \
                     ReserveException, ReserveConflictException, \
@@ -452,6 +452,7 @@ __all__ = [
     'loadConfig',
     'loadUserInfo', 
     'loadOnlineDevices', 
+    'loadOnlineDevices2', 
     'unbind', 
     'logout',
     'checkMacBinding',

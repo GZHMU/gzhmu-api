@@ -85,6 +85,7 @@ an object of WebVPN, for example:
 
 import time
 import json
+import warnings
 from typing import List, Union, Optional
 
 import requests
@@ -95,6 +96,8 @@ default_user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.
 programIndex = None
 pageIndex = None
 pageName = None
+
+warnings.simplefilter('always', DeprecationWarning)
 
 
 class IncorrectAccountOrPasswordException(Exception):
@@ -141,9 +144,9 @@ class UserInfo:
         self.available_flow = float(available_flow)
 
     def __repr__(self):
-        pattern = '%s.%s(account=%s, name=%s, balance=%d, use_flow=%d, available_flow=%d)' 
-        return pattern % (__name__, UserInfo.__name__, repr(self.account), 
-                          repr(self.name), self.balance, self.use_flow, self.available_flow)
+        pattern = '%s(account=%s, name=%s, balance=%d, use_flow=%d, available_flow=%d)' 
+        return pattern % (UserInfo.__name__, repr(self.account), repr(self.name),
+                          self.balance, self.use_flow, self.available_flow)
 
 
 class Device:
@@ -154,8 +157,24 @@ class Device:
         self.login_time = login_time
 
     def __repr__(self):
-        pattern = '%s.%s(login_ip=%s, mac=%s, login_time=%d)' 
-        return pattern % (__name__, Device.__name__, repr(self.login_ip), 
+        pattern = '%s(login_ip=%s, mac=%s, login_time=%d)' 
+        return pattern % (Device.__name__, repr(self.login_ip), 
+                          repr(self.mac), self.login_time)
+
+
+class DeviceInDetail(Device):
+    def __init__(self, login_ip: str, mac: str, login_time: Optional[int],
+            downlink_bytes: int, is_owner_ip: bool):
+        super().__init__(login_ip, mac, login_time)
+        # Total downlink bytes of this device since login.
+        self.downlink_bytes = downlink_bytes
+
+        # Determine whether this device is the device that you are using.
+        self.is_owner_ip = is_owner_ip
+
+    def __repr__(self):
+        pattern = '%s(login_ip=%s, mac=%s, login_time=%d)' 
+        return pattern % (DeviceInDetail.__name__, repr(self.login_ip), 
                           repr(self.mac), self.login_time)
 
 
@@ -247,14 +266,23 @@ def login(account: Union[str, int], password: str, webvpn=None, **kwargs) -> boo
 def loadUserInfo(account: Union[str, int], webvpn=None, **kwargs) -> UserInfo:
     """Get user information of the specified account.
 
+    Deprecated since 2025-06-29. There is no way to get user information
+    since 2025-06-28. You can only get your own information after logging
+    into your account from the intranet now.
+
     :param account: The account.
     :param webvpn: An object of gzhmu.Gzhmu class. With this argument set, you 
         can query this API via web VPN. But you have to log in the protal first.
     :param kwargs: Arguments for requests.request method.
     :return An object of UserInfo.
     """
+    warnings.warn('''Deprecated since 2025-06-29.
+    There is no way to get user information since 2025-06-28.
+    You can only get your own information from the intranet
+    after logging into your account now.''', DeprecationWarning, stacklevel=2)
+
     if programIndex is None or pageIndex is None:
-        loadConfig()
+        loadConfig(webvpn)
 
     url = f'http://192.168.12.3:801/eportal/portal/page/loadUserInfo?lang=en&program_index={programIndex}&page_index={pageIndex}&wlan_user_ip=&wlan_user_mac=&jsVersion=&user_account={account}'
 
@@ -278,14 +306,23 @@ def loadUserInfo(account: Union[str, int], webvpn=None, **kwargs) -> UserInfo:
 def loadOnlineDevices(account: Union[str, int], webvpn=None, **kwargs) -> List[Device]:
     """Get online devices of the specified account.
 
+    Deprecated since 2025-06-29. Use loadOnlineDevices2() instead.
+    With this API, you can only get your own online devices after
+    logging into your account from the intranet now.
+
     :param account: The account.
     :param webvpn: An object of gzhmu.Gzhmu class. With this argument set, you 
         can query this API via web VPN. But you have to log in the protal first.
     :param kwargs: Arguments for requests.request method.
     :return A list of objects of Device.
     """
+    warnings.warn('''Deprecated since 2025-06-29.
+    Use loadOnlineDevices2() instead. With this API, you can
+    only get your own online devices after logging into your
+    account from the intranet now.''', DeprecationWarning, stacklevel=2)
+
     if programIndex is None or pageIndex is None:
-        loadConfig()
+        loadConfig(webvpn)
 
     url = f'http://192.168.12.3:801/eportal/portal/page/loadOnlineRecord?lang=en&program_index={programIndex}&page_index={pageIndex}&wlan_user_ip=&wlan_user_mac=&start_time=0&end_time=0&start_rn=1&end_rn=5&jsVersion=&user_account={account}'
 
@@ -304,6 +341,42 @@ def loadOnlineDevices(account: Union[str, int], webvpn=None, **kwargs) -> List[D
 
     if code == 0:
         raise FailedToLoadOnlineDevicesException()
+
+
+def loadOnlineDevices2(account: Union[str, int], webvpn=None, **kwargs) -> List[DeviceInDetail]:
+    """Get online devices of the specified account.
+
+    Replacement for deprecated loadOnlineDevices() since 2025-06-29.
+
+    :param account: The account.
+    :param webvpn: An object of gzhmu.Gzhmu class. With this argument set, you 
+        can query this API via web VPN. But you have to log in the protal first.
+    :param kwargs: Arguments for requests.request method.
+    :return A list of objects of Device.
+    """
+    url = f'http://192.168.12.3:801/eportal/portal/mac/find?user_account={account}'
+
+    response_json = request_api(url, webvpn=webvpn, **kwargs)
+    result = response_json.get('result')
+
+    if result == 1:
+        records = response_json['list']
+        devices = []
+        for record in records:
+            ip = record['online_ip']
+            mac = record['online_mac']
+            login_time = time.strptime(record['online_time'], r'%Y-%m-%d %H:%M:%S')
+            login_time = time.mktime(login_time)
+            downlink_bytes = int(record['downlink_bytes'])
+            is_owner_ip = record['is_owner_ip'] == '1'
+            device = DeviceInDetail(ip, mac, login_time, downlink_bytes, is_owner_ip)
+            devices.append(device)
+        return devices
+
+    if result == 0:
+        return []
+
+    raise FailedToLoadOnlineDevicesException()
 
      
 def unbind(account: Union[str, int], mac: str, webvpn=None, **kwargs) -> bool:

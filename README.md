@@ -154,7 +154,9 @@ with open('学籍卡片.xls', 'wb') as fp:
 
 ### 4.2. **gmuapi**模块示例
 
-- 在内网查询校园网认证账号信息
+- 在内网查询校园网认证账号信息（已失效）
+
+从2025-06-28开始，校园网完善了对此API的鉴权，已无法查询其他账号的信息，现在此API仅能在用户登录校园网后查询到本账号的信息。
 
 ```python
 from gzhmu import *
@@ -172,7 +174,11 @@ except FailedToGetUserInfoException:
     print('无法获取用户信息，查询的账号不存在')
 ```
 
-- 在内网查询已登录设备的信息
+- 在内网查询已登录设备的信息（已失效）
+
+从2025-06-28开始，校园网完善了对此API的鉴权，已无法通过此API查询其他账号的在线设备信息，现在此API仅能在用户登录校园网后查询到本账号的在线设备信息。
+
+请使用替代方案`loadOnlineDevices2()`，详见下一个示例：**在内网查询已登录设备的信息2.0**。
 
 ```python
 import time
@@ -186,6 +192,28 @@ try:
     for device in devices:
         loginAt = time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(device.login_time))
         print(device.login_ip, device.mac, loginAt, sep='\t')
+except FailedToLoadOnlineDevicesException:
+    print('无法获取在线设备信息，查询的账号不存在')
+```
+
+- 在内网查询已登录设备的信息2.0
+
+2025-06-29，新增`loadOnlineDevices2()`作为`loadOnlineDevices()`的替代方案。返回的设备新增`downlink_bytes`（表示设备自此次登录以来所用的流量）和`is_owner_ip`（判断此设备是否为你此时正在使用的设备）字段。
+
+```python
+import time
+from gzhmu import *
+
+account = 'xxxxxxxxxx'
+try:
+    devices = loadOnlineDevices2(account)
+
+    print('IP\t\tMAC\t\tLogin_Time\tDownlink_Bytes\tIs_Owner_IP')
+    for device in devices:
+        loginAt = time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(device.login_time))
+        downlink_bytes = device.downlink_bytes
+        is_owner_ip = device.is_owner_ip
+        print(device.login_ip, device.mac, loginAt, downlink_bytes, is_owner_ip, sep='\t')
 except FailedToLoadOnlineDevicesException:
     print('无法获取在线设备信息，查询的账号不存在')
 ```
