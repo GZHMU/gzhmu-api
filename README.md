@@ -34,7 +34,7 @@ pip3 install -r requirements.txt
 
 ### 4.1. **gzhmu**模块示例
 
-- 获取指定账号的联系方式
+#### 获取指定账号的联系方式
 
 **[已废弃]** 2025年7月11日，学校官网更新了找回密码页面，前端页面已不返回手机号和邮箱，现已无法通过此方式获取用户的联系方式。如需查询在此之前的账号信息及联系方式，请使用广医找人工具：[广医查](https://github.com/GZHMU/Guangyicha)
 
@@ -55,7 +55,7 @@ except UsernameNotExistsException:
 
 柳暗花明：虽然此方法已无法直接获取完整手机号码，但借助check_phone_binding()方法仍能间接得到完整的手机号码，详见下面2个示例。
 
-- 判断一个手机号码是否绑定到某个账号，或者说数据库中是否存在这个手机号码
+#### 判断一个手机号码是否绑定到某个账号，或者说数据库中是否存在这个手机号码
 
 注意：此方法仅能判断数据库中是否存在某个手机号，而无法获取与之绑定的账号。
 
@@ -66,7 +66,7 @@ result = Gzhmu.check_phone_binding(phone)
 print('手机号码', phone, '存在' if result else '不存在')
 ```
 
-- 使用get_contact()和check_phone_binding()方法获取指定账号的完整手机号码
+#### 使用get_contact()和check_phone_binding()方法获取指定账号的完整手机号码
 
 **[已废弃]** 2025年7月11日，虽然check_phone_binding()方法仍可用，但由于get_contact()方法已失效，所以此示例已失效。
 
@@ -102,7 +102,7 @@ except UsernameNotExistsException:
 
 单线程遍历一次大概耗时十几分钟，如果使用多线程应该可以缩短到几分钟。
 
-- 在内网获取学籍卡片
+#### 在内网获取学籍卡片
 
 ```python
 from gzhmu import *
@@ -118,7 +118,7 @@ with open('学籍卡片.xls', 'wb') as fp:
     fp.write(resp.content)
 ```
 
-- 使用Web VPN获取学籍卡片
+#### 使用Web VPN获取学籍卡片
 
 ```python
 from gzhmu import *
@@ -135,7 +135,7 @@ with open('学籍卡片.xls', 'wb') as fp:
     fp.write(resp.content)
 ```
 
-- 使用Web VPN和网络代理获取学籍卡片
+#### 使用Web VPN和网络代理获取学籍卡片
 
 ```python
 from gzhmu import *
@@ -158,7 +158,7 @@ with open('学籍卡片.xls', 'wb') as fp:
 
 ### 4.2. **gmuapi**模块示例
 
-- 在内网查询校园网认证账号信息（已失效）
+#### 在内网查询校园网认证账号信息（已失效）
 
 从2025-06-28开始，校园网完善了对此API的鉴权，已无法查询其他账号的信息，现在此API仅能在用户登录校园网后查询到本账号的信息。
 
@@ -178,7 +178,7 @@ except FailedToGetUserInfoException:
     print('无法获取用户信息，查询的账号不存在')
 ```
 
-- 在内网查询已登录设备的信息（已失效）
+#### 在内网查询已登录设备的信息（已失效）
 
 从2025-06-28开始，校园网完善了对此API的鉴权，已无法通过此API查询其他账号的在线设备信息，现在此API仅能在用户登录校园网后查询到本账号的在线设备信息。
 
@@ -200,7 +200,7 @@ except FailedToLoadOnlineDevicesException:
     print('无法获取在线设备信息，查询的账号不存在')
 ```
 
-- 在内网查询已登录设备的信息2.0
+#### 在内网查询已登录设备的信息2.0
 
 2025-06-29，新增`loadOnlineDevices2()`作为`loadOnlineDevices()`的替代方案。返回的设备新增`downlink_bytes`（表示设备自此次登录以来所用的流量）和`is_owner_ip`（判断此设备是否为你此时正在使用的设备）字段。
 
@@ -222,7 +222,7 @@ except FailedToLoadOnlineDevicesException:
     print('无法获取在线设备信息，查询的账号不存在')
 ```
 
-- 在内网进行校园网认证
+#### 在内网进行校园网认证
 
 ```python
 from gzhmu import *
@@ -241,7 +241,7 @@ except AlreadyLoggedInException:
     print('当前设备已登录')
 ```
 
-- 使用内网登出当前设备
+#### 使用内网登出当前设备
 
 ```python
 from gzhmu import *
@@ -253,7 +253,7 @@ else:
     print('退出失败')
 ```
 
-- 使用内网解绑设备（登出其他设备）
+#### 使用内网解绑设备（登出其他设备）
 
 解绑后的设备无法再使用无感登录，若要恢复无感登录，需要在该设备上重新手动登录，才能重新绑定，恢复无感登录。
 
@@ -270,7 +270,7 @@ else:
     print('解绑失败')
 ```
 
-- 判断MAC地址是否绑定了账号用于无感登录
+#### 判断MAC地址是否绑定了账号用于无感登录
 
 ```python
 from gzhmu import *
@@ -284,7 +284,7 @@ else:
 
 以上**gmuapi**模块的API，例如`loadUserInfo`、`loadOnlineDevices`和`unbind`都能使用Web VPN在外网进行访问，只需要传入一个`webvpn`参数即可，这个参数是一个`WebVPN`类的实例，例如：
 
-- 在非校园网中使用Web VPN获取用户信息
+#### 在非校园网中使用Web VPN获取用户信息
 
 ```python
 from gzhmu import *
@@ -320,7 +320,7 @@ vpn.logout()
 
 不同座位的座位ID(seat_id)和座位名称(seat_name)都是不同的，所以如果知道某个座位的确切ID或名称，则可以直接通过get_seat_by_id()或get_seat_by_name()方法分别获取，如果均不确定，则需要使用遍历的方法获取Seat对象，例如，可以先遍历所有研修室(Room)，然后再从某个研修室中获取特定座位(Seat)。
 
-- 列出各图书馆的各个研修室名称
+#### 列出各图书馆的各个研修室名称
 
 ```python
 from gzhmu import GmuLib
@@ -335,7 +335,7 @@ for library in libraries:
         print('\t', room.room_name)
 ```
 
-- 获取指定座位的签到链接
+#### 获取指定座位的签到链接
 
 ```python
 from gzhmu import GmuLib
@@ -352,7 +352,7 @@ url = GmuLib.get_check_in_url(seat)  # 越秀图书馆1楼自修区Ⅰ 20号座�
 print(url)
 ```
 
-- 从签到链接中获取座位信息
+#### 从签到链接中获取座位信息
 
 ```python
 from gzhmu import GmuLib
@@ -365,7 +365,7 @@ seat = lib.get_seat_by_check_in_url(check_in_url)
 print('{} {} {}号座'.format(seat.lib_name, seat.room_name, seat.seat_number))
 ```
 
-- 查询用户最新的预约记录
+#### 查询用户最新的预约记录
 
 ```python
 from gzhmu import GmuLib
@@ -386,7 +386,7 @@ for record in user_records:
     print(reserve_at, seat_name, owner, state, is_checked_in, start, end, sep='\t')
 ```
 
-- 查询用户最新的三个月已完成的预约记录
+#### 查询用户最新的三个月已完成的预约记录
 
 ```python
 from gzhmu import GmuLib
@@ -408,7 +408,7 @@ for user_record in user_records:
     print(reserve_at, seat_name, owner, state, is_checked_in, is_default, start, end, sep='\t')
 ```
 
-- 查询用户信息
+#### 查询用户信息
 
 ```python
 from gzhmu import GmuLib
@@ -422,7 +422,7 @@ print('部门：', user_info.department)
 print('剩余信用分：', user_info.score)
 ```
 
-- 获取实时座位信息
+#### 获取实时座位信息
 
 ```python
 from gzhmu import GmuLib
@@ -456,7 +456,7 @@ for seat_info in seat_info_list:
     print()
 ```
 
-- 获取今天的所有预约信息
+#### 获取今天的所有预约信息
 
 ```python
 from gzhmu import GmuLib
@@ -475,7 +475,7 @@ for user_record in user_records:
     print(seat_name, owner, state, start, end, sep='\t')
 ```
 
-- 预约一个座位
+#### 预约一个座位
 
 ```python
 from datetime import datetime, time
@@ -496,7 +496,7 @@ except ReserveConflictException as e:
     print('座位冲突，当前作为已被预约或正在使用中')
 ```
 
-- 取消一个尚未生效的预约
+#### 取消一个尚未生效的预约
 
 ```python
 from datetime import datetime, time
@@ -526,7 +526,7 @@ except CanNotCancelValidatedReservationException as e:
 
 注意：一个预约会在预约开始时间的前15分钟开始生效，直到预约结束，在预约生效前可以随时取消，而预约生效后无法正常取消，此时只能通过签到再结束使用来避免违约，详见以下2个示例：
 
-- 对一个已生效预约进行签到
+#### 对一个已生效预约进行签到
 
 ```python
 from datetime import datetime, time
@@ -548,7 +548,7 @@ for record in user_records:
             print('成功签到')
 ```
 
-- 结束一个已生效预约座位的使用
+#### 结束一个已生效预约座位的使用
 
 ```python
 from datetime import datetime, time
