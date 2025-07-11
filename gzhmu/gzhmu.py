@@ -1,5 +1,6 @@
 import re
 import base64
+import warnings
 from io import BytesIO
 from typing import Union, Optional
 from urllib.parse import urlparse, urlunparse, urlencode, parse_qs
@@ -10,6 +11,9 @@ from Crypto.Cipher import AES, PKCS1_v1_5
 from PIL import Image
 
 from .captcha import recognize
+
+
+warnings.simplefilter('always', DeprecationWarning)
 
 
 class InvalidUsernameException(Exception):
@@ -106,6 +110,8 @@ class Gzhmu:
     among different threads, which may cause unexpected result.
 
     Get contact:
+
+    [DEPRECATED] Since 2025-07-11, there is no way to get user contact.
 
         >>> from gzhmu import Gzhmu
         >>> username = 'xxxxxxxxxx'
@@ -368,6 +374,9 @@ class Gzhmu:
                     **kwargs) -> Contact:
         """Get the contact of a specific user.
 
+        Deprecated since 2025-07-11. The official website of GMU has
+        been updated and there is no way to get user contact.
+
         Note: Since April 2025, the official website of GMU has been
         updated and the bug that you can get the complete phone number
         and email address from frontend has been fixed. Therefore,
@@ -384,6 +393,10 @@ class Gzhmu:
         :param kwargs: Arguments for requests.request method.
         :returns A Contact object.
         """
+        warnings.warn('''Deprecated since 2025-07-11.
+        The official website of GMU has been updated and
+        there is no way to get user contact.''', DeprecationWarning, stacklevel=2)
+
         if not Gzhmu.is_valid_username(username):
             raise InvalidUsernameException(username)
 
